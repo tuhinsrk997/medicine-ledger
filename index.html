@@ -47,7 +47,7 @@ button.btn { padding: 8px 12px; border: none; border-radius: 4px; font-size: 0.8
 input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; margin-top: 4px; margin-bottom: 8px; }
 label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
-.termux-banner { background: #e8f4fd; border: 1px solid #b8daff; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8rem; }
+.api-banner { background: #e8f4fd; border: 1px solid #b8daff; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8rem; }
 .row-boundary-rule { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #856404; }
 
 .viewer-container { position: relative; background: #1a1a1a; border-radius: 6px; overflow: hidden; margin-bottom: 10px; text-align: center; }
@@ -66,16 +66,14 @@ canvas#imageCanvas { max-width: 100%; height: auto; box-shadow: 0 0 10px rgba(0,
 table.report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; }
 table.report-table th, table.report-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
 table.report-table th { background: #e9ecef; position: sticky; top: 0; }
-table.report-table tr:hover { background: #f8f9fa; }
 .num-cell { text-align: right; font-weight: 600; font-family: monospace; }
 .status-pill { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
 .pill-verified { background: #d4edda; color: #155724; }
 .pill-partial { background: #fff3cd; color: #856404; }
-.pill-unresolved { background: #f8d7da; color: #721c24; }
 
 @media print {
   body { padding: 0; background: white; }
-  header, nav.tabs, .no-print, .termux-banner { display: none !important; }
+  header, nav.tabs, .no-print, .api-banner { display: none !important; }
   .screen { display: block !important; }
   #screen-workspace, #screen-review, #screen-master, #screen-backup { display: none !important; }
   #screen-report { display: block !important; }
@@ -88,9 +86,9 @@ table.report-table tr:hover { background: #f8f9fa; }
 <header>
   <div>
     <h1>Daily Medicine Consumption Ledger</h1>
-    <span style="font-size: 0.7rem; opacity: 0.85;">Termux Background Engine &bull; Rows 1–38 Strict</span>
+    <span style="font-size: 0.7rem; opacity: 0.85;">Web Vision Engine &bull; Rows 1–38 Strict</span>
   </div>
-  <div class="badge" id="termuxStatusBadge">Checking Termux...</div>
+  <div class="badge" id="storageStatusBadge">Online Ready</div>
 </header>
 
 <nav class="tabs no-print">
@@ -102,18 +100,11 @@ table.report-table tr:hover { background: #f8f9fa; }
 </nav>
 
 <main>
-
-  <!-- SCREEN B: DATE & RUN WORKSPACE -->
+  <!-- TAB 1: WORKSPACE -->
   <section id="screen-workspace" class="screen active">
-    <div class="termux-banner">
-      <div style="display:flex; justify-content:space-between; align-items:center;">
-        <strong>Termux Python Backend (localhost:8080):</strong>
-        <span id="termuxIndicator" style="font-weight:700; color:var(--danger);">Disconnected</span>
-      </div>
-      <div style="margin-top:6px; display:flex; gap:6px;">
-        <input type="text" id="geminiApiKeyInput" placeholder="Paste Gemini API Key" style="margin:0; font-size:0.75rem;" onchange="saveApiKey()">
-        <button class="btn btn-outline btn-sm" onclick="checkTermuxConnection()">Check Connection</button>
-      </div>
+    <div class="api-banner">
+      <label>Google AI Studio Gemini API Key (Saved in this browser):</label>
+      <input type="text" id="geminiApiKeyInput" placeholder="Paste your Gemini API Key here..." onchange="saveApiKey()" style="margin-bottom:0;">
     </div>
 
     <div class="card">
@@ -143,27 +134,24 @@ table.report-table tr:hover { background: #f8f9fa; }
     </div>
   </section>
 
-  <!-- SCREEN C: PAGE REVIEW & FULL-AUTO EXTRACTION -->
+  <!-- TAB 2: REVIEW & EXTRACTION -->
   <section id="screen-review" class="screen">
     <div class="row-boundary-rule">
-      <strong>LOCKED REGISTER RULE:</strong> Only numbers from <strong>rows 1 to 38</strong> are counted. Serial numbers, patient names, and anything below row 38 are excluded by deterministic validation.
+      <strong>LOCKED REGISTER RULE:</strong> Rows 1 to 38 are strictly identified by the <strong>printed `SL NO` on the left margin (1 to 38)</strong>. Serial numbers, patient names, stock columns, and any rows below SL #38 are strictly excluded.
     </div>
 
     <div class="card" style="border: 2px solid var(--primary);">
       <div class="card-title">
-        <span>1-Click Termux Auto-Extraction (Zero Manual Input)</span>
+        <span>1-Click Auto-Extraction (Zero Manual Input)</span>
         <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px; text-transform:none; margin:0; cursor:pointer;">
           <input type="checkbox" id="autoPurgeCheckbox" checked style="width:auto; margin:0;">
           Purge photo after extraction (Save Phone Storage)
         </label>
       </div>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
-        Termux crops rows 1–38 strictly, extracts all numbers, executes integer arithmetic, and populates the table automatically.
-      </p>
-      <button class="btn btn-primary btn-block" id="btnAutoExtract" onclick="runTermuxAutoExtraction()">
-        Extract Numbers Automatically via Termux
+      <button class="btn btn-primary btn-block" id="btnAutoExtract" onclick="runWebAutoExtraction()">
+        Extract Numbers Automatically
       </button>
-      <div id="termuxExtractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
+      <div id="extractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
     </div>
 
     <div class="card">
@@ -212,7 +200,7 @@ table.report-table tr:hover { background: #f8f9fa; }
     </div>
   </section>
 
-  <!-- SCREEN D: TOTALS & REPORTS -->
+  <!-- TAB 3: TOTALS & REPORTS -->
   <section id="screen-report" class="screen">
     <div class="card">
       <div class="card-title no-print">
@@ -228,7 +216,7 @@ table.report-table tr:hover { background: #f8f9fa; }
         <label>Report Scope:</label>
         <select id="reportScopeSelector" onchange="generateDailyReport()" style="margin-top:4px; font-weight:600;">
           <option value="activeRun">Active Calculation Run Only</option>
-          <option value="combinedDate">Combined Grand Total (All Calculations on this Date)</option>
+          <option value="combinedDate">Combined Grand Total (All Runs on this Date)</option>
         </select>
       </div>
 
@@ -262,7 +250,7 @@ table.report-table tr:hover { background: #f8f9fa; }
     </div>
   </section>
 
-  <!-- SCREEN A: MEDICINES -->
+  <!-- TAB 4: MEDICINES -->
   <section id="screen-master" class="screen">
     <div class="card">
       <div class="card-title">Approved Medicine Master (<span id="medMasterCount">0</span>/110)</div>
@@ -270,16 +258,18 @@ table.report-table tr:hover { background: #f8f9fa; }
     </div>
   </section>
 
-  <!-- SCREEN F: STORAGE & BACKUP -->
+  <!-- TAB 5: BACKUP -->
   <section id="screen-backup" class="screen">
     <div class="card">
       <div class="card-title">Local Storage & Full Backup</div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+        All data is preserved locally in your browser's IndexedDB. Download a backup before clearing browser data.
+      </p>
       <button class="btn btn-primary btn-block" onclick="exportFullJSONBackup()">Download Full JSON Backup</button>
       <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);">
       <button class="btn btn-outline btn-block" onclick="purgeAllProcessedPhotos()">Purge All Photos (Frees ~99% Phone Memory)</button>
     </div>
   </section>
-
 </main>
 
 <script>
@@ -379,7 +369,7 @@ const DEFAULT_IRC_MEDICINES = [
   { id: 88, name: "Tab Levocetirizine 5mg", sheet: "sheet2", col: 48 }
 ];
 
-const DB_NAME = "DailyMedicineLedgerDB_Termux";
+const DB_NAME = "DailyMedicineLedgerDB_WebPure";
 const DB_VERSION = 1;
 let db = null;
 
@@ -492,7 +482,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   await initIndexedDB();
   document.getElementById("selectedDateInput").value = activeDate;
   loadApiKey();
-  await checkTermuxConnection();
   await onDateChanged();
 });
 
@@ -508,29 +497,6 @@ function switchTab(screenId) {
   if (screenId === "screen-review" && activePage) loadPageForReview();
 }
 
-async function checkTermuxConnection() {
-  const badge = document.getElementById("termuxStatusBadge");
-  const indicator = document.getElementById("termuxIndicator");
-
-  try {
-    const res = await fetch("http://127.0.0.1:8080/health", { method: "GET" });
-    const data = await res.json();
-    if (data.status === "online") {
-      badge.innerText = "Termux: Connected";
-      badge.style.background = "#28a745";
-      indicator.innerText = "Connected (Ready)";
-      indicator.style.color = "var(--success)";
-      return true;
-    }
-  } catch (err) {
-    badge.innerText = "Termux: Offline";
-    badge.style.background = "rgba(255,255,255,0.25)";
-    indicator.innerText = "Disconnected (Run python server.py in Termux)";
-    indicator.style.color = "var(--danger)";
-    return false;
-  }
-}
-
 function saveApiKey() {
   const k = document.getElementById("geminiApiKeyInput").value.trim();
   localStorage.setItem("gemini_api_key", k);
@@ -541,58 +507,122 @@ function loadApiKey() {
   document.getElementById("geminiApiKeyInput").value = k;
 }
 
-async function runTermuxAutoExtraction() {
+// ----------------------------------------------------
+// DYNAMIC WEB VISION EXTRACTION (Direct Browser -> Gemini)
+// ----------------------------------------------------
+async function findActiveModel(apiKey) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await res.json();
+    const models = data.models || [];
+    const valid = models.filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace("models/", ""));
+    const flash = valid.filter(m => m.toLowerCase().includes("flash"));
+    if (flash.length) return flash[0];
+    if (valid.length) return valid[0];
+  } catch (e) {
+    console.warn("Model discovery note:", e);
+  }
+  return "gemini-1.5-flash-latest";
+}
+
+async function runWebAutoExtraction() {
   if (!activePage || !activePage.imageData) {
-    return alert("Please select a valid page with a photo first.");
+    return alert("Please select a page with an uploaded photo first.");
   }
-
-  const isConnected = await checkTermuxConnection();
-  if (!isConnected) {
-    return alert("Cannot connect to Termux on http://127.0.0.1:8080.\nPlease run `python server.py` in Termux.");
-  }
-
   const apiKey = document.getElementById("geminiApiKeyInput").value.trim();
   if (!apiKey) {
-    return alert("Please enter your Gemini API key in the Termux banner.");
+    return alert("Please paste your Gemini API key in the top box.");
   }
 
-  const msg = document.getElementById("termuxExtractMsg");
+  const msg = document.getElementById("extractMsg");
   const btn = document.getElementById("btnAutoExtract");
   btn.disabled = true;
-  msg.innerText = "Termux is cropping rows 1–38 and extracting quantities...";
+  msg.innerText = "Analyzing register image and discovering active vision model...";
 
   try {
-    const response = await fetch("http://127.0.0.1:8080/extract", {
+    const model = await findActiveModel(apiKey);
+    msg.innerText = `Extracting numbers using ${model}...`;
+
+    const base64Data = activePage.imageData.split(",")[1];
+    const prompt = (
+      "You are an expert hospital ledger extraction system.\n"
+      "Step 1: Identify if this page is Sheet 1 (starts with Acetylsalicylic acid / has patient names) "
+      "or Sheet 2 (starts with Ibuprofen, ends with Zinc and handwritten columns).\n"
+      "Step 2: Read every handwritten consumption number in each medicine column strictly between numbered rows 1 and 38.\n"
+      "CRITICAL ROW ANCHOR RULE:\n"
+      "- Look at the printed 'SL NO' column running down the LEFT margin.\n"
+      "- Row 1 aligns strictly with SL #1. Row 38 aligns strictly with SL #38.\n"
+      "- Extract numbers ONLY from cells horizontally aligned with SL #1 through SL #38.\n"
+      "- STRICTLY IGNORE any numbers or text below SL #38 (e.g. daily totals, remarks, signatures).\n"
+      "- STRICTLY IGNORE patient names, registration numbers, serial numbers, and stock columns (A, B, C).\n"
+      "- Return a valid raw JSON object with keys:\n"
+      "  \"layout\": \"sheet1\" or \"sheet2\",\n"
+      "  \"readings\": { \"Medicine Exact Name\": [list of numbers found in rows 1 to 38] }\n"
+      "Example: {\"layout\": \"sheet2\", \"readings\": {\"Metformin 500 mg Tablet\": [15, 30]}}\n"
+      "Do NOT calculate the sum. Output only valid JSON without markdown formatting."
+    );
+
+    let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        image: activePage.imageData,
-        api_key: apiKey
+        contents: [{
+          parts: [
+            { text: prompt },
+            { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+          ]
+        }],
+        generationConfig: { temperature: 0.0 }
       })
     });
 
-    const result = await response.json();
-    if (result.status !== "success") {
-      throw new Error(result.message || "Extraction error");
+    if (!response.ok) {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          contents: [{
+            parts: [
+              { text: prompt },
+              { inline_data: { mime_type: "image/jpeg", data: base64Data } }
+            ]
+          }],
+          generationConfig: { temperature: 0.0 }
+        })
+      });
     }
 
-    if (result.layout) {
-      activePage.layout = result.layout;
-      document.getElementById("pageLayoutType").value = result.layout;
-    }
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let rawReply = data.candidates[0].content.parts[0].text.trim();
+    if (rawReply.startsWith("```json")) rawReply = rawReply.substring(7);
+    if (rawReply.startsWith("```")) rawReply = rawReply.substring(3);
+    if (rawReply.endsWith("```")) rawReply = rawReply.substring(0, rawReply.length - 3);
+
+    const parsed = JSON.parse(rawReply.trim());
+    const layout = (parsed.layout || "sheet1").toLowerCase();
+    const readings = parsed.readings || {};
+
+    activePage.layout = layout;
+    document.getElementById("pageLayoutType").value = layout;
 
     const allMeds = await getAllFromStore("medicines");
-    const currentMeds = allMeds.filter(m => m.sheet === (activePage.layout || "sheet1"));
+    const currentMeds = allMeds.filter(m => m.sheet === layout);
 
+    // EXACT DETERMINISTIC ADDITION IN JAVASCRIPT
     for (const m of currentMeds) {
-      const extractedVal = result.totals[m.name] || 0;
+      const rawList = readings[m.name] || [];
+      const cleanNums = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n >= 0 && n <= 5000);
+      const total = cleanNums.reduce((a, b) => a + b, 0);
+
       await putRecord("entries", {
         key: `${activePage.id}_med_${m.id}`,
         pageId: activePage.id,
         calcId: activePage.calcId,
         date: activeDate,
         medId: m.id,
-        quantity: extractedVal,
+        quantity: total,
         verified: true,
         rowsRange: "1-38",
         updated: Date.now()
@@ -617,6 +647,9 @@ async function runTermuxAutoExtraction() {
   }
 }
 
+// ----------------------------------------------------
+// DATE & RUNS MANAGEMENT
+// ----------------------------------------------------
 async function onDateChanged() {
   activeDate = document.getElementById("selectedDateInput").value;
   let allRuns = await getAllFromStore("runs");
@@ -992,7 +1025,7 @@ function exportReportHTML() {
 
 async function exportFullJSONBackup() {
   const backup = {
-    version: "5.0_TermuxBridge",
+    version: "6.0_WebDirect",
     dateExported: new Date().toISOString(),
     medicines: await getAllFromStore("medicines"),
     runs: await getAllFromStore("runs"),
@@ -1009,7 +1042,7 @@ async function purgeAllProcessedPhotos() {
     p.imageData = null;
     await putRecord("pages", p);
   }
-  alert("All photos purged from phone storage.");
+  alert("All photos purged from browser storage.");
   await refreshDatePagesList();
 }
 
