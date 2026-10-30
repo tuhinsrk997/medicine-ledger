@@ -122,12 +122,21 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
       </div>
     </div>
 
+    <!-- Upload Card with Direct Action Button -->
     <div class="card">
       <div class="card-title">
         <span>Upload Photos for <strong id="uploadTargetRunLabel" style="color:var(--primary);">Calculation Run 1</strong></span>
       </div>
-      <input type="file" id="batchImageInput" accept="image/*" multiple onchange="handleImageBatchUpload(event)">
-      <div id="uploadProgress" style="font-size:0.8rem; font-weight:600; color:var(--primary); margin-top:6px;"></div>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
+        Select your register photos, then tap <strong>Load Selected Photos</strong>:
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="file" id="batchImageInput" accept="image/*" multiple onchange="onFileSelectionChanged()" style="flex:1; margin:0;">
+        <button class="btn btn-primary" id="btnProcessPhotos" onclick="processSelectedFiles()">
+          Load Selected Photos
+        </button>
+      </div>
+      <div id="uploadProgress" style="font-size:0.85rem; font-weight:700; margin-top:8px;"></div>
     </div>
 
     <div class="card">
@@ -275,7 +284,7 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 </main>
 
 <script>
-// Exact Approved Medicine Master (88 medicines)
+// Master list of 88 exact medicines
 const SHEET1_NAMES = [
   "Acetylsalicylic acid 75mg Tablet", "Albendazole 10ml Suspension", "Albendazole 400mg Tablet",
   "Amitriptyline 25 mg Tablet", "Amlodipine 5mg Tablet", "Amoxicillin 125mg/5ml powder for Suspension 100ml",
@@ -319,89 +328,110 @@ const DEFAULT_IRC_MEDICINES = [
   ...SHEET2_NAMES.map((name, i) => ({ id: i + 41, name, sheet: "sheet2", col: i + 1 }))
 ];
 
-const DB_NAME = "DailyMedicineLedgerDB_V4";
+// In-Memory Backup in case IndexedDB fails on mobile Chrome
+window.MEMORY_PAGES = [];
+window.MEMORY_RUNS = [];
+window.MEMORY_ENTRIES = [];
+
+const DB_NAME = "DailyMedicineLedgerDB_V5";
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open(DB_NAME, 1);
-    request.onupgradeneeded = (e) => {
-      const d = e.target.result;
-      if (!d.objectStoreNames.contains("medicines")) d.createObjectStore("medicines", { keyPath: "id" });
-      if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "calcId" });
-      if (!d.objectStoreNames.contains("pages")) d.createObjectStore("pages", { keyPath: "id" });
-      if (!d.objectStoreNames.contains("entries")) d.createObjectStore("entries", { keyPath: "key" });
-    };
-    request.onsuccess = async (e) => {
-      db = e.target.result;
-      await seedMedicines();
-      resolve(db);
-    };
-    request.onerror = () => resolve(null);
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains("medicines")) d.createObjectStore("medicines", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "calcId" });
+        if (!d.objectStoreNames.contains("pages")) d.createObjectStore("pages", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("entries")) d.createObjectStore("entries", { keyPath: "key" });
+      };
+      request.onsuccess = async (e) => {
+        db = e.target.result;
+        await seedMedicines();
+        resolve(db);
+      };
+      request.onerror = () => resolve(null);
+    } catch (e) {
+      resolve(null);
+    }
   });
 }
 
 async function seedMedicines() {
   if (!db) return;
-  const count = await getCount("medicines");
-  if (count === 0) {
-    const tx = db.transaction("medicines", "readwrite");
-    const store = tx.objectStore("medicines");
-    DEFAULT_IRC_MEDICINES.forEach(m => store.put(m));
-  }
+  try {
+    const count = await getCount("medicines");
+    if (count === 0) {
+      const tx = db.transaction("medicines", "readwrite");
+      const store = tx.objectStore("medicines");
+      DEFAULT_IRC_MEDICINES.forEach(m => store.put(m));
+    }
+  } catch (e) {}
 }
 
 function getCount(storeName) {
   return new Promise((res) => {
     if (!db) return res(0);
-    const tx = db.transaction(storeName, "readonly");
-    const req = tx.objectStore(storeName).count();
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => res(0);
+    try {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).count();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(0);
+    } catch(e) { res(0); }
   });
 }
 
 function getAllFromStore(storeName) {
   return new Promise((res) => {
     if (!db) return res([]);
-    const tx = db.transaction(storeName, "readonly");
-    const req = tx.objectStore(storeName).getAll();
-    req.onsuccess = () => res(req.result || []);
-    req.onerror = () => res([]);
+    try {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => res([]);
+    } catch(e) { res([]); }
   });
 }
 
 function putRecord(storeName, record) {
-  return new Promise((res, rej) => {
+  return new Promise((res) => {
     if (!db) return res();
-    const tx = db.transaction(storeName, "readwrite");
-    const req = tx.objectStore(storeName).put(record);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => rej(req.error);
+    try {
+      const tx = db.transaction(storeName, "readwrite");
+      const req = tx.objectStore(storeName).put(record);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res();
+    } catch(e) { res(); }
   });
 }
 
 function getRecord(storeName, key) {
   return new Promise((res) => {
     if (!db) return res(null);
-    const tx = db.transaction(storeName, "readonly");
-    const req = tx.objectStore(storeName).get(key);
-    req.onsuccess = () => res(req.result);
-    req.onerror = () => res(null);
+    try {
+      const tx = db.transaction(storeName, "readonly");
+      const req = tx.objectStore(storeName).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(null);
+    } catch(e) { res(null); }
   });
 }
 
 function deleteRecord(storeName, key) {
-  return new Promise((res, rej) => {
+  return new Promise((res) => {
     if (!db) return res();
-    const tx = db.transaction(storeName, "readwrite");
-    const req = tx.objectStore(storeName).delete(key);
-    req.onsuccess = () => res();
-    req.onerror = () => rej(req.error);
+    try {
+      const tx = db.transaction(storeName, "readwrite");
+      const req = tx.objectStore(storeName).delete(key);
+      req.onsuccess = () => res();
+      req.onerror = () => res();
+    } catch(e) { res(); }
   });
 }
 
-// Mobile Image Optimizer: Resizes 10MB camera photo to lightweight, crisp 1600px JPEG in memory
+// Resizes high-res phone camera photo to lightweight JPEG (~250 KB)
 function compressImage(file, maxDimension = 1600, quality = 0.85) {
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
@@ -419,9 +449,18 @@ function compressImage(file, maxDimension = 1600, quality = 0.85) {
         ctx.drawImage(img, 0, 0, w, h);
         resolve(canvas.toDataURL("image/jpeg", quality));
       };
-      img.onerror = reject;
+      img.onerror = () => reject(new Error("Image decode failed"));
       img.src = e.target.result;
     };
+    reader.onerror = () => reject(new Error("File read error"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileRaw(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
     reader.onerror = reject;
     reader.readAsDataURL(file);
   });
@@ -468,6 +507,7 @@ function loadApiKey() {
 async function ensureActiveRun() {
   activeDate = document.getElementById("selectedDateInput").value || "2026-02-10";
   let allRuns = await getAllFromStore("runs");
+  if (!allRuns.length && window.MEMORY_RUNS.length) allRuns = window.MEMORY_RUNS;
   let dateRuns = allRuns.filter(r => r.date === activeDate);
 
   if (dateRuns.length === 0) {
@@ -477,6 +517,7 @@ async function ensureActiveRun() {
       label: "Calculation Run 1"
     };
     await putRecord("runs", initialRun);
+    window.MEMORY_RUNS.push(initialRun);
     dateRuns = [initialRun];
   }
 
@@ -503,6 +544,7 @@ async function onDateChanged() {
 async function onCalculationRunChanged() {
   activeCalcId = document.getElementById("activeCalcSelector").value;
   activeRun = await getRecord("runs", activeCalcId);
+  if (!activeRun) activeRun = window.MEMORY_RUNS.find(r => r.calcId === activeCalcId);
   if (activeRun) {
     document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
   }
@@ -519,6 +561,7 @@ async function promptNewCalculationRun() {
     label: name.trim()
   };
   await putRecord("runs", newRun);
+  window.MEMORY_RUNS.push(newRun);
   await ensureActiveRun();
   const selector = document.getElementById("activeCalcSelector");
   selector.value = newRun.calcId;
@@ -534,39 +577,76 @@ async function renameCurrentRun() {
   await ensureActiveRun();
 }
 
-// BATCH UPLOAD WITH INSTANT REAL-TIME COMPRESSION
-async function handleImageBatchUpload(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length) return;
+function onFileSelectionChanged() {
+  const input = document.getElementById("batchImageInput");
+  const count = (input.files || []).length;
+  const btn = document.getElementById("btnProcessPhotos");
+  if (count > 0) {
+    btn.innerText = `Load ${count} Selected Photos`;
+    btn.style.background = "#28a745";
+  } else {
+    btn.innerText = `Load Selected Photos`;
+    btn.style.background = "#005a9c";
+  }
+}
+
+// BATCH UPLOAD WITH COMPRESSION AND DIRECT ERROR HANDLING
+async function processSelectedFiles() {
+  const input = document.getElementById("batchImageInput");
+  const files = Array.from(input.files || []);
   const prog = document.getElementById("uploadProgress");
 
-  for (let i = 0; i < files.length; i++) {
-    prog.innerText = `Compressing & saving photo ${i + 1} of ${files.length}...`;
-    const compressedDataUrl = await compressImage(files[i]);
-    const pageId = `page_${activeCalcId}_${Date.now()}_${i}`;
-    const defaultLayout = (i % 2 === 0) ? "sheet1" : "sheet2";
-
-    await putRecord("pages", {
-      id: pageId,
-      calcId: activeCalcId,
-      date: activeDate,
-      filename: files[i].name,
-      pageNumber: i + 1,
-      layout: defaultLayout,
-      imageData: compressedDataUrl,
-      verified: false,
-      rotation: 0
-    });
+  if (!files.length) {
+    alert("Please tap 'Choose Files' and select your register photos first.");
+    return;
   }
 
-  prog.innerText = `Successfully loaded ${files.length} pages!`;
-  setTimeout(() => { prog.innerText = ""; }, 3000);
-  await refreshDatePagesList();
+  prog.innerHTML = `<span style="color:#005a9c;">Preparing to load ${files.length} photos...</span>`;
+
+  try {
+    await ensureActiveRun();
+
+    for (let i = 0; i < files.length; i++) {
+      prog.innerHTML = `<span style="color:#005a9c;">Processing photo ${i + 1} of ${files.length} (${files[i].name})...</span>`;
+      
+      let dataUrl = "";
+      try {
+        dataUrl = await compressImage(files[i]);
+      } catch (err) {
+        dataUrl = await readFileRaw(files[i]);
+      }
+
+      const pageId = `page_${activeCalcId}_${Date.now()}_${i}`;
+      const defaultLayout = (i % 2 === 0) ? "sheet1" : "sheet2";
+
+      const pageRecord = {
+        id: pageId,
+        calcId: activeCalcId,
+        date: activeDate,
+        filename: files[i].name,
+        pageNumber: i + 1,
+        layout: defaultLayout,
+        imageData: dataUrl,
+        verified: false,
+        rotation: 0
+      };
+
+      await putRecord("pages", pageRecord);
+      window.MEMORY_PAGES.push(pageRecord);
+    }
+
+    prog.innerHTML = `<span style="color:var(--success);">Successfully loaded ${files.length} photos! See list below.</span>`;
+    await refreshDatePagesList();
+  } catch (err) {
+    prog.innerHTML = `<span style="color:var(--danger);">Upload error: ${err.message}</span>`;
+  }
 }
 
 async function refreshDatePagesList() {
-  if (!activeCalcId) return;
-  const allPages = await getAllFromStore("pages");
+  await ensureActiveRun();
+  let allPages = await getAllFromStore("pages");
+  if (!allPages.length && window.MEMORY_PAGES.length) allPages = window.MEMORY_PAGES;
+
   const pages = allPages.filter(p => p.calcId === activeCalcId);
   const container = document.getElementById("datePagesList");
   const selector = document.getElementById("reviewPageSelector");
@@ -585,9 +665,9 @@ async function refreshDatePagesList() {
     selector.appendChild(opt);
 
     html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.8rem;">
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.85rem;">
         <div><strong>Page ${p.pageNumber || idx + 1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending'}</span></div>
-        <button class="btn btn-outline btn-sm" onclick="selectPageForReview('${p.id}')">Open & Extract</button>
+        <button class="btn btn-primary btn-sm" onclick="selectPageForReview('${p.id}')">Open & Extract</button>
       </div>
     `;
   });
@@ -606,6 +686,7 @@ async function loadPageForReview() {
   const pageId = document.getElementById("reviewPageSelector").value;
   if (!pageId) return;
   activePage = await getRecord("pages", pageId);
+  if (!activePage) activePage = window.MEMORY_PAGES.find(p => p.id === pageId);
   if (!activePage) return;
 
   document.getElementById("pageLayoutType").value = activePage.layout || "sheet1";
@@ -672,7 +753,7 @@ function drawCanvas() {
   ctx.restore();
 }
 
-// DYNAMIC GEMINI VISION MODEL DISCOVERY
+// AUTO-DISCOVER ACTIVE MODEL FROM USER API KEY
 async function findActiveModel(apiKey) {
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
@@ -683,9 +764,7 @@ async function findActiveModel(apiKey) {
     const flash = models.filter(m => m.toLowerCase().includes("flash"));
     if (flash.length) return flash[0];
     if (models.length) return models[0];
-  } catch (e) {
-    console.warn("Model discovery note:", e);
-  }
+  } catch (e) {}
   return "gemini-1.5-flash-latest";
 }
 
@@ -763,7 +842,7 @@ async function runWebAutoExtraction() {
     document.getElementById("pageLayoutType").value = layout;
 
     const allMeds = await getAllFromStore("medicines");
-    const currentMeds = allMeds.filter(m => m.sheet === layout);
+    const currentMeds = (allMeds.length ? allMeds : DEFAULT_IRC_MEDICINES).filter(m => m.sheet === layout);
 
     // DETERMINISTIC INTEGER ADDITION IN JAVASCRIPT
     for (const m of currentMeds) {
@@ -771,7 +850,7 @@ async function runWebAutoExtraction() {
       const cleanNums = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n >= 0 && n <= 5000);
       const total = cleanNums.reduce((a, b) => a + b, 0);
 
-      await putRecord("entries", {
+      const entry = {
         key: `${activePage.id}_med_${m.id}`,
         pageId: activePage.id,
         calcId: activePage.calcId,
@@ -781,7 +860,10 @@ async function runWebAutoExtraction() {
         verified: true,
         rowsRange: "1-38",
         updated: Date.now()
-      });
+      };
+
+      await putRecord("entries", entry);
+      window.MEMORY_ENTRIES.push(entry);
     }
 
     activePage.verified = true;
@@ -805,10 +887,13 @@ async function runWebAutoExtraction() {
 async function renderEntryGrid() {
   if (!activePage) return;
   const layout = activePage.layout || "sheet1";
-  const allMeds = await getAllFromStore("medicines");
+  let allMeds = await getAllFromStore("medicines");
+  if (!allMeds.length) allMeds = DEFAULT_IRC_MEDICINES;
   const filteredMeds = allMeds.filter(m => m.sheet === layout);
 
-  const allEntries = await getAllFromStore("entries");
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length && window.MEMORY_ENTRIES.length) allEntries = window.MEMORY_ENTRIES;
+
   const pageEntries = allEntries.filter(e => e.pageId === activePage.id);
   const entryMap = {};
   pageEntries.forEach(e => { entryMap[e.medId] = e; });
@@ -842,7 +927,7 @@ async function onManualQtyChanged(medId) {
   const inputEl = document.getElementById(`qty_input_${medId}`);
   const qty = parseInt(inputEl.value, 10) || 0;
 
-  await putRecord("entries", {
+  const entry = {
     key: `${activePage.id}_med_${medId}`,
     pageId: activePage.id,
     calcId: activePage.calcId,
@@ -852,7 +937,9 @@ async function onManualQtyChanged(medId) {
     verified: true,
     rowsRange: "1-38",
     updated: Date.now()
-  });
+  };
+  await putRecord("entries", entry);
+  window.MEMORY_ENTRIES.push(entry);
 }
 
 async function onLayoutChanged() {
@@ -872,8 +959,7 @@ async function deleteActivePage() {
   if (!activePage) return;
   if (!confirm("Delete this page?")) return;
   await deleteRecord("pages", activePage.id);
-  const entries = (await getAllFromStore("entries")).filter(e => e.pageId === activePage.id);
-  for (const ent of entries) await deleteRecord("entries", ent.key);
+  window.MEMORY_PAGES = window.MEMORY_PAGES.filter(p => p.id !== activePage.id);
   alert("Page deleted.");
   activePage = null;
   drawCanvas();
@@ -887,9 +973,14 @@ async function generateDailyReport() {
 
   let pages = [];
   let entries = [];
-  const allPages = await getAllFromStore("pages");
-  const allEntries = await getAllFromStore("entries");
-  const medicines = await getAllFromStore("medicines");
+  let allPages = await getAllFromStore("pages");
+  if (!allPages.length) allPages = window.MEMORY_PAGES;
+
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
+
+  let medicines = await getAllFromStore("medicines");
+  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
 
   if (scope === "activeRun") {
     document.getElementById("repRunTag").innerText = activeRun ? activeRun.label : "Active Run";
@@ -939,8 +1030,12 @@ async function generateDailyReport() {
 
 async function exportReportCSV() {
   const scope = document.getElementById("reportScopeSelector").value;
-  const medicines = await getAllFromStore("medicines");
-  const allEntries = await getAllFromStore("entries");
+  let medicines = await getAllFromStore("medicines");
+  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
+
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
+
   const entries = (scope === "activeRun") ? allEntries.filter(e => e.calcId === activeCalcId) : allEntries.filter(e => e.date === activeDate);
 
   const totals = {};
@@ -962,7 +1057,7 @@ function exportReportHTML() {
 
 async function exportFullJSONBackup() {
   const backup = {
-    version: "7.0_Optimized",
+    version: "8.0_Bulletproof",
     dateExported: new Date().toISOString(),
     medicines: await getAllFromStore("medicines"),
     runs: await getAllFromStore("runs"),
@@ -979,6 +1074,7 @@ async function purgeAllProcessedPhotos() {
     p.imageData = null;
     await putRecord("pages", p);
   }
+  window.MEMORY_PAGES.forEach(p => p.imageData = null);
   alert("All photos purged from browser storage.");
   await refreshDatePagesList();
 }
@@ -993,7 +1089,8 @@ function downloadBlob(content, filename, mimeType) {
 }
 
 async function renderMedicineMaster() {
-  const meds = await getAllFromStore("medicines");
+  let meds = await getAllFromStore("medicines");
+  if (!meds.length) meds = DEFAULT_IRC_MEDICINES;
   document.getElementById("medMasterCount").innerText = meds.length;
   let html = "";
   meds.forEach(m => {
