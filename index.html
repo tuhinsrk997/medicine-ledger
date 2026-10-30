@@ -18,14 +18,14 @@
   --warning: #ffc107;
   --danger: #dc3545;
 }
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; }
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
 body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
 header { background: var(--primary); color: white; padding: 10px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
 header h1 { font-size: 1rem; font-weight: 600; }
 header .badge { background: rgba(255,255,255,0.25); padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; }
 
 nav.tabs { display: flex; background: var(--primary-dark); overflow-x: auto; white-space: nowrap; }
-nav.tabs button { flex: 1; min-width: 75px; padding: 10px 6px; border: none; background: transparent; color: #cfd8dc; font-size: 0.8rem; font-weight: 500; text-align: center; cursor: pointer; }
+nav.tabs button { flex: 1; min-width: 75px; padding: 10px 6px; border: none; background: transparent; color: #cfd8dc; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
 nav.tabs button.active { color: #ffffff; border-bottom: 3px solid #ffab00; background: rgba(255,255,255,0.08); font-weight: 700; }
 
 main { padding: 12px; max-width: 900px; margin: 0 auto; }
@@ -44,7 +44,7 @@ button.btn { padding: 8px 12px; border: none; border-radius: 4px; font-size: 0.8
 .btn-sm { padding: 4px 8px; font-size: 0.75rem; }
 .btn-block { width: 100%; display: flex; margin-top: 6px; }
 
-input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; margin-top: 4px; margin-bottom: 8px; }
+input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; margin-top: 4px; margin-bottom: 8px; background: white; color: var(--text); }
 label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
 
 .api-banner { background: #e8f4fd; border: 1px solid #b8daff; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8rem; }
@@ -114,7 +114,9 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 
       <label>Active Calculation Run on this Date</label>
       <div style="display:flex; gap:6px;">
-        <select id="activeCalcSelector" onchange="onCalculationRunChanged()" style="margin:0;"></select>
+        <select id="activeCalcSelector" onchange="onCalculationRunChanged()" style="margin:0;">
+          <option value="run_default">Calculation Run 1</option>
+        </select>
         <button class="btn btn-outline btn-sm" onclick="promptNewCalculationRun()">+ New Run</button>
         <button class="btn btn-secondary btn-sm" onclick="renameCurrentRun()">Rename</button>
       </div>
@@ -122,10 +124,10 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 
     <div class="card">
       <div class="card-title">
-        <span>Upload Photos for <strong id="uploadTargetRunLabel" style="color:var(--primary);">Run 1</strong></span>
+        <span>Upload Photos for <strong id="uploadTargetRunLabel" style="color:var(--primary);">Calculation Run 1</strong></span>
       </div>
       <input type="file" id="batchImageInput" accept="image/*" multiple onchange="handleImageBatchUpload(event)">
-      <div id="uploadProgress" style="font-size:0.8rem; font-weight:600; color:var(--primary); margin-top:4px;"></div>
+      <div id="uploadProgress" style="font-size:0.8rem; font-weight:600; color:var(--primary); margin-top:6px;"></div>
     </div>
 
     <div class="card">
@@ -137,7 +139,7 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
   <!-- TAB 2: REVIEW & EXTRACTION -->
   <section id="screen-review" class="screen">
     <div class="row-boundary-rule">
-      <strong>LOCKED REGISTER RULE:</strong> Rows 1 to 38 are strictly identified by the <strong>printed `SL NO` on the left margin (1 to 38)</strong>. Serial numbers, patient names, stock columns, and any rows below SL #38 are strictly excluded.
+      <strong>LOCKED REGISTER RULE:</strong> Rows 1 to 38 are strictly anchored to the printed <strong>SL NO (1 to 38)</strong> down the left side. Everything below SL #38 is strictly excluded.
     </div>
 
     <div class="card" style="border: 2px solid var(--primary);">
@@ -169,7 +171,7 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
           <button onclick="rotateImage(90)">Rotate 90&deg; &rarr;</button>
           <button onclick="zoomImage(1.2)">Zoom +</button>
           <button onclick="zoomImage(0.8)">Zoom &minus;</button>
-          <button onclick="resetImageTransform()">Reset</button>
+          <button onclick="resetImageTransform()">Reset View</button>
         </div>
         <div class="canvas-wrapper">
           <canvas id="imageCanvas"></canvas>
@@ -273,151 +275,80 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 </main>
 
 <script>
-const DEFAULT_IRC_MEDICINES = [
-  // SHEET 1 (Columns 1-40)
-  { id: 1, name: "Acetylsalicylic acid 75mg Tablet", sheet: "sheet1", col: 1 },
-  { id: 2, name: "Albendazole 10ml Suspension", sheet: "sheet1", col: 2 },
-  { id: 3, name: "Albendazole 400mg Tablet", sheet: "sheet1", col: 3 },
-  { id: 4, name: "Amitriptyline 25 mg Tablet", sheet: "sheet1", col: 4 },
-  { id: 5, name: "Amlodipine 5mg Tablet", sheet: "sheet1", col: 5 },
-  { id: 6, name: "Amoxicillin 125mg/5ml powder for Suspension 100ml", sheet: "sheet1", col: 6 },
-  { id: 7, name: "Amoxicillin 250 mg Capsule", sheet: "sheet1", col: 7 },
-  { id: 8, name: "Amoxicillin 500mg Capsule", sheet: "sheet1", col: 8 },
-  { id: 9, name: "Amoxicillin, 500mg + Clavulanic Acid, 125mg, Tablet", sheet: "sheet1", col: 9 },
-  { id: 10, name: "Antacid Tablet (aluminum and/or magnesium salts)", sheet: "sheet1", col: 10 },
-  { id: 11, name: "Atenolol 50mg Tablet", sheet: "sheet1", col: 11 },
-  { id: 12, name: "Azithromycin 200mg/5ml powder for oral Suspension 15ml", sheet: "sheet1", col: 12 },
-  { id: 13, name: "Azithromycin 250 mg Tablet", sheet: "sheet1", col: 13 },
-  { id: 14, name: "Azithromycin 500mg Tablet", sheet: "sheet1", col: 14 },
-  { id: 15, name: "Bisoprolol 2.5mg Tablet", sheet: "sheet1", col: 15 },
-  { id: 16, name: "Bromhexine Hydrochloride 4mg/5ml syrup", sheet: "sheet1", col: 16 },
-  { id: 17, name: "Calcium 500mg Tablet", sheet: "sheet1", col: 17 },
-  { id: 18, name: "Carbonyl Iron 50mg + Folic Acid 0.5mg + Zinc Sulphate 61.8mg Capsule", sheet: "sheet1", col: 18 },
-  { id: 19, name: "Carbamazepine 200mg Tablet", sheet: "sheet1", col: 19 },
-  { id: 20, name: "Cefixime 100mg/5ml Suspension", sheet: "sheet1", col: 20 },
-  { id: 21, name: "Cefixime 200 mg Tablet", sheet: "sheet1", col: 21 },
-  { id: 22, name: "Cetirizine 10 mg Tablet", sheet: "sheet1", col: 22 },
-  { id: 23, name: "Chloramphenicol 1% eye drops", sheet: "sheet1", col: 23 },
-  { id: 24, name: "Chlorpheniramine maleate 2mg/ 5ml 100 ml oral solution", sheet: "sheet1", col: 24 },
-  { id: 25, name: "Ciprofloxacin 0.3% eye drops", sheet: "sheet1", col: 25 },
-  { id: 26, name: "Ciprofloxacin 500mg Tablet", sheet: "sheet1", col: 26 },
-  { id: 27, name: "Clotrimazole 1% cream", sheet: "sheet1", col: 27 },
-  { id: 28, name: "Clotrimazole vaginal 200mg Tablet", sheet: "sheet1", col: 28 },
-  { id: 29, name: "Diazepam 5mg Tablet", sheet: "sheet1", col: 29 },
-  { id: 30, name: "Diclofenac 50 mg Tablet", sheet: "sheet1", col: 30 },
-  { id: 31, name: "Domperidone 10mg Tablet", sheet: "sheet1", col: 31 },
-  { id: 32, name: "Flucloxacillin 125mg/5ml oral Suspension", sheet: "sheet1", col: 32 },
-  { id: 33, name: "Flucloxacillin 250mg Capsule", sheet: "sheet1", col: 33 },
-  { id: 34, name: "Flucloxacillin 500mg Capsule", sheet: "sheet1", col: 34 },
-  { id: 35, name: "Fluconazole 50mg Capsule", sheet: "sheet1", col: 35 },
-  { id: 36, name: "Fluoxetine 20mg Capsule", sheet: "sheet1", col: 36 },
-  { id: 37, name: "Furosemide 40mg Tablet", sheet: "sheet1", col: 37 },
-  { id: 38, name: "Glibenclamide 5mg Tablet", sheet: "sheet1", col: 38 },
-  { id: 39, name: "Gliclazide 80mg Tablet", sheet: "sheet1", col: 39 },
-  { id: 40, name: "Hydrochlorothiazide 12.5mg Tablet", sheet: "sheet1", col: 40 },
-
-  // SHEET 2 (Columns 41-80)
-  { id: 41, name: "Ibuprofen 400mg Tablet", sheet: "sheet2", col: 1 },
-  { id: 42, name: "Lactulose 10g/15ml oral solution", sheet: "sheet2", col: 2 },
-  { id: 43, name: "Losartan 50mg Tablet", sheet: "sheet2", col: 3 },
-  { id: 44, name: "Metformin 500 mg Tablet", sheet: "sheet2", col: 4 },
-  { id: 45, name: "Methyldopa 250mg Tablet", sheet: "sheet2", col: 5 },
-  { id: 46, name: "Metronidazole 400mg Tablet", sheet: "sheet2", col: 6 },
-  { id: 47, name: "Miconazole 2% cream", sheet: "sheet2", col: 7 },
-  { id: 48, name: "Montelukast 10mg Tablet", sheet: "sheet2", col: 8 },
-  { id: 49, name: "Multivitamin Tablet", sheet: "sheet2", col: 9 },
-  { id: 50, name: "Mupirocin 2% ointment", sheet: "sheet2", col: 10 },
-  { id: 51, name: "Neomycin Sulphate + Bacitracin Zinc + Polymyxin B Sulphate", sheet: "sheet2", col: 11 },
-  { id: 52, name: "Nystatin 100,000 IU/ml oral Suspension", sheet: "sheet2", col: 12 },
-  { id: 53, name: "Olanzapine 10 mg Tablet", sheet: "sheet2", col: 13 },
-  { id: 54, name: "Omeprazole 20mg Capsule", sheet: "sheet2", col: 14 },
-  { id: 55, name: "Ondansetron 4mg/5ml 50ml syrup", sheet: "sheet2", col: 15 },
-  { id: 56, name: "Ondansetron 8 mg Tablet", sheet: "sheet2", col: 16 },
-  { id: 57, name: "Oral rehydration salts 10.25g/500ml", sheet: "sheet2", col: 17 },
-  { id: 58, name: "Paracetamol 120mg/5ml oral solution", sheet: "sheet2", col: 18 },
-  { id: 59, name: "Paracetamol 500mg Tablet", sheet: "sheet2", col: 19 },
-  { id: 60, name: "Paracetamol, 250mg, Supp", sheet: "sheet2", col: 20 },
-  { id: 61, name: "Paracetamol, 500mg, Supp", sheet: "sheet2", col: 21 },
-  { id: 62, name: "Permethrin 5% cream/lotion", sheet: "sheet2", col: 22 },
-  { id: 63, name: "Prednisolone 20mg Tablet", sheet: "sheet2", col: 23 },
-  { id: 64, name: "Procyclidine Hydrochloride 5 mg Tablet", sheet: "sheet2", col: 24 },
-  { id: 65, name: "Risperidone 1 mg Tablet", sheet: "sheet2", col: 25 },
-  { id: 66, name: "Rosuvastatin 10mg Tablet", sheet: "sheet2", col: 26 },
-  { id: 67, name: "Salbutamol 0.1 mg/dose Inhaler", sheet: "sheet2", col: 27 },
-  { id: 68, name: "Salbutamol, syrup, 2mg/5ml in 100ml", sheet: "sheet2", col: 28 },
-  { id: 69, name: "Silver sulfadiazine 1% cream", sheet: "sheet2", col: 29 },
-  { id: 70, name: "Simeticone 67mg/ml paediatric drops", sheet: "sheet2", col: 30 },
-  { id: 71, name: "Sodium chloride 0.9% 10ml Nasal Drop", sheet: "sheet2", col: 31 },
-  { id: 72, name: "Sodium valproate 200mg (valproic acid)", sheet: "sheet2", col: 32 },
-  { id: 73, name: "Sodium valproate 500mg Tablet (valproic acid)", sheet: "sheet2", col: 33 },
-  { id: 74, name: "Tiemonium methylsulphate 50mg Tablet", sheet: "sheet2", col: 34 },
-  { id: 75, name: "Tolperisone, Hydrochloride, 50mg, Tablet", sheet: "sheet2", col: 35 },
-  { id: 76, name: "Tranexamic acid 500mg Capsule", sheet: "sheet2", col: 36 },
-  { id: 77, name: "Vitamin B compound/complex Tablet", sheet: "sheet2", col: 37 },
-  { id: 78, name: "Vitamin C (ascorbic acid) 250mg Tablet", sheet: "sheet2", col: 38 },
-  { id: 79, name: "Zinc dispersible 20mg Tablet", sheet: "sheet2", col: 39 },
-  { id: 80, name: "Zinc sulphate syrup 2mg/ml, syrup", sheet: "sheet2", col: 40 },
-
-  // CONFIRMED HANDWRITTEN ADDITIONS
-  { id: 81, name: "Cap Doxycycline 100mg", sheet: "sheet2", col: 41 },
-  { id: 82, name: "Tab Montelukast 4mg", sheet: "sheet2", col: 42 },
-  { id: 83, name: "Syr Ambroxol HCl", sheet: "sheet2", col: 43 },
-  { id: 84, name: "P/D Ambroxol HCl", sheet: "sheet2", col: 44 },
-  { id: 85, name: "Tab Nitroglycerine 2.6mg", sheet: "sheet2", col: 45 },
-  { id: 86, name: "Tab Bisoprolol 5mg", sheet: "sheet2", col: 46 },
-  { id: 87, name: "Tab Cefuroxime 250mg", sheet: "sheet2", col: 47 },
-  { id: 88, name: "Tab Levocetirizine 5mg", sheet: "sheet2", col: 48 }
+// Exact Approved Medicine Master (88 medicines)
+const SHEET1_NAMES = [
+  "Acetylsalicylic acid 75mg Tablet", "Albendazole 10ml Suspension", "Albendazole 400mg Tablet",
+  "Amitriptyline 25 mg Tablet", "Amlodipine 5mg Tablet", "Amoxicillin 125mg/5ml powder for Suspension 100ml",
+  "Amoxicillin 250 mg Capsule", "Amoxicillin 500mg Capsule", "Amoxicillin, 500mg + Clavulanic Acid, 125mg, Tablet",
+  "Antacid Tablet (aluminum and/or magnesium salts)", "Atenolol 50mg Tablet",
+  "Azithromycin 200mg/5ml powder for oral Suspension 15ml", "Azithromycin 250 mg Tablet",
+  "Azithromycin 500mg Tablet", "Bisoprolol 2.5mg Tablet", "Bromhexine Hydrochloride 4mg/5ml syrup",
+  "Calcium 500mg Tablet", "Carbonyl Iron 50mg + Folic Acid 0.5mg + Zinc Sulphate 61.8mg Capsule",
+  "Carbamazepine 200mg Tablet", "Cefixime 100mg/5ml Suspension", "Cefixime 200 mg Tablet",
+  "Cetirizine 10 mg Tablet", "Chloramphenicol 1% eye drops", "Chlorpheniramine maleate 2mg/ 5ml 100 ml oral solution",
+  "Ciprofloxacin 0.3% eye drops", "Ciprofloxacin 500mg Tablet", "Clotrimazole 1% cream",
+  "Clotrimazole vaginal 200mg Tablet", "Diazepam 5mg Tablet", "Diclofenac 50 mg Tablet",
+  "Domperidone 10mg Tablet", "Flucloxacillin 125mg/5ml oral Suspension", "Flucloxacillin 250mg Capsule",
+  "Flucloxacillin 500mg Capsule", "Fluconazole 50mg Capsule", "Fluoxetine 20mg Capsule",
+  "Furosemide 40mg Tablet", "Glibenclamide 5mg Tablet", "Gliclazide 80mg Tablet",
+  "Hydrochlorothiazide 12.5mg Tablet"
 ];
 
-const DB_NAME = "DailyMedicineLedgerDB_WebPure";
-const DB_VERSION = 1;
+const SHEET2_NAMES = [
+  "Ibuprofen 400mg Tablet", "Lactulose 10g/15ml oral solution", "Losartan 50mg Tablet",
+  "Metformin 500 mg Tablet", "Methyldopa 250mg Tablet", "Metronidazole 400mg Tablet",
+  "Miconazole 2% cream", "Montelukast 10mg Tablet", "Multivitamin Tablet", "Mupirocin 2% ointment",
+  "Neomycin Sulphate + Bacitracin Zinc + Polymyxin B Sulphate", "Nystatin 100,000 IU/ml oral Suspension",
+  "Olanzapine 10 mg Tablet", "Omeprazole 20mg Capsule", "Ondansetron 4mg/5ml 50ml syrup",
+  "Ondansetron 8 mg Tablet", "Oral rehydration salts 10.25g/500ml", "Paracetamol 120mg/5ml oral solution",
+  "Paracetamol 500mg Tablet", "Paracetamol, 250mg, Supp", "Paracetamol, 500mg, Supp",
+  "Permethrin 5% cream/lotion", "Prednisolone 20mg Tablet", "Procyclidine Hydrochloride 5 mg Tablet",
+  "Risperidone 1 mg Tablet", "Rosuvastatin 10mg Tablet", "Salbutamol 0.1 mg/dose Inhaler",
+  "Salbutamol, syrup, 2mg/5ml in 100ml", "Silver sulfadiazine 1% cream", "Simeticone 67mg/ml paediatric drops",
+  "Sodium chloride 0.9% 10ml Nasal Drop", "Sodium valproate 200mg (valproic acid)",
+  "Sodium valproate 500mg Tablet (valproic acid)", "Tiemonium methylsulphate 50mg Tablet",
+  "Tolperisone, Hydrochloride, 50mg, Tablet", "Tranexamic acid 500mg Capsule",
+  "Vitamin B compound/complex Tablet", "Vitamin C (ascorbic acid) 250mg Tablet",
+  "Zinc dispersible 20mg Tablet", "Zinc sulphate syrup 2mg/ml, syrup",
+  "Cap Doxycycline 100mg", "Tab Montelukast 4mg", "Syr Ambroxol HCl", "P/D Ambroxol HCl",
+  "Tab Nitroglycerine 2.6mg", "Tab Bisoprolol 5mg", "Tab Cefuroxime 250mg", "Tab Levocetirizine 5mg"
+];
+
+const DEFAULT_IRC_MEDICINES = [
+  ...SHEET1_NAMES.map((name, i) => ({ id: i + 1, name, sheet: "sheet1", col: i + 1 })),
+  ...SHEET2_NAMES.map((name, i) => ({ id: i + 41, name, sheet: "sheet2", col: i + 1 }))
+];
+
+const DB_NAME = "DailyMedicineLedgerDB_V4";
 let db = null;
 
 function initIndexedDB() {
   return new Promise((resolve) => {
-    const request = indexedDB.open(DB_NAME, DB_VERSION);
+    const request = indexedDB.open(DB_NAME, 1);
     request.onupgradeneeded = (e) => {
-      const database = e.target.result;
-      if (!database.objectStoreNames.contains("medicines")) database.createObjectStore("medicines", { keyPath: "id" });
-      if (!database.objectStoreNames.contains("runs")) {
-        const runStore = database.createObjectStore("runs", { keyPath: "calcId" });
-        runStore.createIndex("date", "date", { unique: false });
-      }
-      if (!database.objectStoreNames.contains("pages")) {
-        const pageStore = database.createObjectStore("pages", { keyPath: "id" });
-        pageStore.createIndex("calcId", "calcId", { unique: false });
-        pageStore.createIndex("date", "date", { unique: false });
-      }
-      if (!database.objectStoreNames.contains("entries")) {
-        const entryStore = database.createObjectStore("entries", { keyPath: "key" });
-        entryStore.createIndex("calcId", "calcId", { unique: false });
-        entryStore.createIndex("date", "date", { unique: false });
-        entryStore.createIndex("pageId", "pageId", { unique: false });
-      }
+      const d = e.target.result;
+      if (!d.objectStoreNames.contains("medicines")) d.createObjectStore("medicines", { keyPath: "id" });
+      if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "calcId" });
+      if (!d.objectStoreNames.contains("pages")) d.createObjectStore("pages", { keyPath: "id" });
+      if (!d.objectStoreNames.contains("entries")) d.createObjectStore("entries", { keyPath: "key" });
     };
     request.onsuccess = async (e) => {
       db = e.target.result;
       await seedMedicines();
       resolve(db);
     };
+    request.onerror = () => resolve(null);
   });
 }
 
 async function seedMedicines() {
+  if (!db) return;
   const count = await getCount("medicines");
   if (count === 0) {
     const tx = db.transaction("medicines", "readwrite");
     const store = tx.objectStore("medicines");
-    DEFAULT_IRC_MEDICINES.forEach(med => store.put(med));
-    await txDone(tx);
+    DEFAULT_IRC_MEDICINES.forEach(m => store.put(m));
   }
-}
-
-function txDone(tx) {
-  return new Promise((res, rej) => {
-    tx.oncomplete = () => res();
-    tx.onerror = () => rej(tx.error);
-  });
 }
 
 function getCount(storeName) {
@@ -470,9 +401,35 @@ function deleteRecord(storeName, key) {
   });
 }
 
+// Mobile Image Optimizer: Resizes 10MB camera photo to lightweight, crisp 1600px JPEG in memory
+function compressImage(file, maxDimension = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDimension || h > maxDimension) {
+          if (w > h) { h = Math.round((h * maxDimension) / w); w = maxDimension; }
+          else { w = Math.round((w * maxDimension) / h); h = maxDimension; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        const ctx = canvas.getContext("2d");
+        ctx.drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = reject;
+      img.src = e.target.result;
+    };
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
 let activeDate = "2026-02-10";
-let activeCalcId = null;
-let activeRun = null;
+let activeCalcId = "run_default";
+let activeRun = { calcId: "run_default", label: "Calculation Run 1", date: "2026-02-10" };
 let activePage = null;
 let currentRotation = 0;
 let currentZoom = 1.0;
@@ -482,7 +439,8 @@ window.addEventListener("DOMContentLoaded", async () => {
   await initIndexedDB();
   document.getElementById("selectedDateInput").value = activeDate;
   loadApiKey();
-  await onDateChanged();
+  await ensureActiveRun();
+  await refreshDatePagesList();
 });
 
 function switchTab(screenId) {
@@ -507,24 +465,231 @@ function loadApiKey() {
   document.getElementById("geminiApiKeyInput").value = k;
 }
 
-// ----------------------------------------------------
-// DYNAMIC WEB VISION EXTRACTION (Direct Browser -> Gemini)
-// ----------------------------------------------------
+async function ensureActiveRun() {
+  activeDate = document.getElementById("selectedDateInput").value || "2026-02-10";
+  let allRuns = await getAllFromStore("runs");
+  let dateRuns = allRuns.filter(r => r.date === activeDate);
+
+  if (dateRuns.length === 0) {
+    const initialRun = {
+      calcId: `run_${activeDate}_${Date.now()}`,
+      date: activeDate,
+      label: "Calculation Run 1"
+    };
+    await putRecord("runs", initialRun);
+    dateRuns = [initialRun];
+  }
+
+  const selector = document.getElementById("activeCalcSelector");
+  selector.innerHTML = "";
+  dateRuns.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.calcId;
+    opt.text = r.label;
+    selector.appendChild(opt);
+  });
+
+  activeCalcId = dateRuns[0].calcId;
+  activeRun = dateRuns[0];
+  selector.value = activeCalcId;
+  document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
+}
+
+async function onDateChanged() {
+  await ensureActiveRun();
+  await refreshDatePagesList();
+}
+
+async function onCalculationRunChanged() {
+  activeCalcId = document.getElementById("activeCalcSelector").value;
+  activeRun = await getRecord("runs", activeCalcId);
+  if (activeRun) {
+    document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
+  }
+  await refreshDatePagesList();
+}
+
+async function promptNewCalculationRun() {
+  const name = prompt(`Enter name for new calculation on ${activeDate}:`, "Shift 2");
+  if (!name || !name.trim()) return;
+
+  const newRun = {
+    calcId: `run_${activeDate}_${Date.now()}`,
+    date: activeDate,
+    label: name.trim()
+  };
+  await putRecord("runs", newRun);
+  await ensureActiveRun();
+  const selector = document.getElementById("activeCalcSelector");
+  selector.value = newRun.calcId;
+  await onCalculationRunChanged();
+}
+
+async function renameCurrentRun() {
+  if (!activeRun) return;
+  const newName = prompt("Rename this calculation run:", activeRun.label);
+  if (!newName || !newName.trim()) return;
+  activeRun.label = newName.trim();
+  await putRecord("runs", activeRun);
+  await ensureActiveRun();
+}
+
+// BATCH UPLOAD WITH INSTANT REAL-TIME COMPRESSION
+async function handleImageBatchUpload(e) {
+  const files = Array.from(e.target.files);
+  if (!files.length) return;
+  const prog = document.getElementById("uploadProgress");
+
+  for (let i = 0; i < files.length; i++) {
+    prog.innerText = `Compressing & saving photo ${i + 1} of ${files.length}...`;
+    const compressedDataUrl = await compressImage(files[i]);
+    const pageId = `page_${activeCalcId}_${Date.now()}_${i}`;
+    const defaultLayout = (i % 2 === 0) ? "sheet1" : "sheet2";
+
+    await putRecord("pages", {
+      id: pageId,
+      calcId: activeCalcId,
+      date: activeDate,
+      filename: files[i].name,
+      pageNumber: i + 1,
+      layout: defaultLayout,
+      imageData: compressedDataUrl,
+      verified: false,
+      rotation: 0
+    });
+  }
+
+  prog.innerText = `Successfully loaded ${files.length} pages!`;
+  setTimeout(() => { prog.innerText = ""; }, 3000);
+  await refreshDatePagesList();
+}
+
+async function refreshDatePagesList() {
+  if (!activeCalcId) return;
+  const allPages = await getAllFromStore("pages");
+  const pages = allPages.filter(p => p.calcId === activeCalcId);
+  const container = document.getElementById("datePagesList");
+  const selector = document.getElementById("reviewPageSelector");
+
+  selector.innerHTML = '<option value="">Select a page to review...</option>';
+  if (!pages.length) {
+    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">No pages uploaded yet for this run.</span>`;
+    return;
+  }
+
+  let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
+  pages.forEach((p, idx) => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.text = `Page #${p.pageNumber || idx + 1} (${p.layout === 'sheet1' ? 'Sheet 1: 1-40' : 'Sheet 2: 41-80+'}) - ${p.verified ? 'Verified' : 'Pending'}`;
+    selector.appendChild(opt);
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.8rem;">
+        <div><strong>Page ${p.pageNumber || idx + 1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending'}</span></div>
+        <button class="btn btn-outline btn-sm" onclick="selectPageForReview('${p.id}')">Open & Extract</button>
+      </div>
+    `;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+// PAGE REVIEW & CANVAS
+async function selectPageForReview(pageId) {
+  document.getElementById("reviewPageSelector").value = pageId;
+  switchTab("screen-review");
+  await loadPageForReview();
+}
+
+async function loadPageForReview() {
+  const pageId = document.getElementById("reviewPageSelector").value;
+  if (!pageId) return;
+  activePage = await getRecord("pages", pageId);
+  if (!activePage) return;
+
+  document.getElementById("pageLayoutType").value = activePage.layout || "sheet1";
+  document.getElementById("reviewPageNumber").value = activePage.pageNumber || "";
+  currentRotation = activePage.rotation || 0;
+
+  if (activePage.imageData) {
+    currentImgElement = new Image();
+    currentImgElement.onload = drawCanvas;
+    currentImgElement.src = activePage.imageData;
+  } else {
+    currentImgElement = null;
+    drawCanvas();
+  }
+  await renderEntryGrid();
+}
+
+function rotateImage(deg) {
+  currentRotation = (currentRotation + deg) % 360;
+  if (currentRotation < 0) currentRotation += 360;
+  if (activePage) {
+    activePage.rotation = currentRotation;
+    putRecord("pages", activePage);
+  }
+  drawCanvas();
+}
+
+function zoomImage(factor) {
+  currentZoom *= factor;
+  if (currentZoom < 0.3) currentZoom = 0.3;
+  if (currentZoom > 4.0) currentZoom = 4.0;
+  drawCanvas();
+}
+
+function resetImageTransform() {
+  currentRotation = 0; currentZoom = 1.0; drawCanvas();
+}
+
+function drawCanvas() {
+  const canvas = document.getElementById("imageCanvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!currentImgElement) {
+    canvas.width = 300; canvas.height = 120;
+    ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffffff"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Photo purged to save storage.", canvas.width / 2, 55);
+    ctx.fillText("Extracted numbers remain saved.", canvas.width / 2, 75);
+    return;
+  }
+
+  const is90or270 = (currentRotation === 90 || currentRotation === 270);
+  const w = is90or270 ? currentImgElement.height : currentImgElement.width;
+  const h = is90or270 ? currentImgElement.width : currentImgElement.height;
+
+  canvas.width = w * currentZoom;
+  canvas.height = h * currentZoom;
+
+  ctx.save();
+  ctx.scale(currentZoom, currentZoom);
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate((currentRotation * Math.PI) / 180);
+  ctx.drawImage(currentImgElement, -currentImgElement.width / 2, -currentImgElement.height / 2);
+  ctx.restore();
+}
+
+// DYNAMIC GEMINI VISION MODEL DISCOVERY
 async function findActiveModel(apiKey) {
   try {
     const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
     const data = await res.json();
-    const models = data.models || [];
-    const valid = models.filter(m => (m.supportedGenerationMethods || []).includes("generateContent")).map(m => m.name.replace("models/", ""));
-    const flash = valid.filter(m => m.toLowerCase().includes("flash"));
+    const models = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name.replace("models/", ""));
+    const flash = models.filter(m => m.toLowerCase().includes("flash"));
     if (flash.length) return flash[0];
-    if (valid.length) return valid[0];
+    if (models.length) return models[0];
   } catch (e) {
     console.warn("Model discovery note:", e);
   }
   return "gemini-1.5-flash-latest";
 }
 
+// 1-CLICK EXTRACTION WITH EXACT DETERMINISTIC MATH
 async function runWebAutoExtraction() {
   if (!activePage || !activePage.imageData) {
     return alert("Please select a page with an uploaded photo first.");
@@ -537,7 +702,7 @@ async function runWebAutoExtraction() {
   const msg = document.getElementById("extractMsg");
   const btn = document.getElementById("btnAutoExtract");
   btn.disabled = true;
-  msg.innerText = "Analyzing register image and discovering active vision model...";
+  msg.innerText = "Discovering active Gemini model...";
 
   try {
     const model = await findActiveModel(apiKey);
@@ -546,7 +711,7 @@ async function runWebAutoExtraction() {
     const base64Data = activePage.imageData.split(",")[1];
     const prompt = (
       "You are an expert hospital ledger extraction system.\n"
-      "Step 1: Identify if this page is Sheet 1 (starts with Acetylsalicylic acid / has patient names) "
+      "Step 1: Identify if this page is Sheet 1 (contains patient names and starts with Acetylsalicylic acid) "
       "or Sheet 2 (starts with Ibuprofen, ends with Zinc and handwritten columns).\n"
       "Step 2: Read every handwritten consumption number in each medicine column strictly between numbered rows 1 and 38.\n"
       "CRITICAL ROW ANCHOR RULE:\n"
@@ -566,12 +731,7 @@ async function runWebAutoExtraction() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        contents: [{
-          parts: [
-            { text: prompt },
-            { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-          ]
-        }],
+        contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } }] }],
         generationConfig: { temperature: 0.0 }
       })
     });
@@ -581,12 +741,7 @@ async function runWebAutoExtraction() {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          contents: [{
-            parts: [
-              { text: prompt },
-              { inline_data: { mime_type: "image/jpeg", data: base64Data } }
-            ]
-          }],
+          contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } }] }],
           generationConfig: { temperature: 0.0 }
         })
       });
@@ -610,7 +765,7 @@ async function runWebAutoExtraction() {
     const allMeds = await getAllFromStore("medicines");
     const currentMeds = allMeds.filter(m => m.sheet === layout);
 
-    // EXACT DETERMINISTIC ADDITION IN JAVASCRIPT
+    // DETERMINISTIC INTEGER ADDITION IN JAVASCRIPT
     for (const m of currentMeds) {
       const rawList = readings[m.name] || [];
       const cleanNums = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n >= 0 && n <= 5000);
@@ -645,224 +800,6 @@ async function runWebAutoExtraction() {
   } finally {
     btn.disabled = false;
   }
-}
-
-// ----------------------------------------------------
-// DATE & RUNS MANAGEMENT
-// ----------------------------------------------------
-async function onDateChanged() {
-  activeDate = document.getElementById("selectedDateInput").value;
-  let allRuns = await getAllFromStore("runs");
-  let dateRuns = allRuns.filter(r => r.date === activeDate);
-
-  if (dateRuns.length === 0) {
-    const initialRun = {
-      calcId: `run_${activeDate}_${Date.now()}_1`,
-      date: activeDate,
-      label: "Calculation Run 1",
-      created: Date.now()
-    };
-    await putRecord("runs", initialRun);
-    dateRuns = [initialRun];
-  }
-
-  const selector = document.getElementById("activeCalcSelector");
-  selector.innerHTML = "";
-  dateRuns.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r.calcId;
-    opt.text = r.label;
-    selector.appendChild(opt);
-  });
-
-  activeCalcId = dateRuns[0].calcId;
-  selector.value = activeCalcId;
-  await onCalculationRunChanged();
-}
-
-async function onCalculationRunChanged() {
-  activeCalcId = document.getElementById("activeCalcSelector").value;
-  activeRun = await getRecord("runs", activeCalcId);
-  if (activeRun) {
-    document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
-  }
-  activePage = null;
-  currentImgElement = null;
-  await refreshDatePagesList();
-}
-
-async function promptNewCalculationRun() {
-  const name = prompt(`Enter name for new calculation on ${activeDate}:`, "Shift 2");
-  if (!name || !name.trim()) return;
-
-  const newRun = {
-    calcId: `run_${activeDate}_${Date.now()}`,
-    date: activeDate,
-    label: name.trim(),
-    created: Date.now()
-  };
-  await putRecord("runs", newRun);
-  await onDateChanged();
-}
-
-async function renameCurrentRun() {
-  if (!activeRun) return;
-  const newName = prompt("Rename this calculation run:", activeRun.label);
-  if (!newName || !newName.trim()) return;
-  activeRun.label = newName.trim();
-  await putRecord("runs", activeRun);
-  await onDateChanged();
-}
-
-async function handleImageBatchUpload(e) {
-  const files = Array.from(e.target.files);
-  if (!files.length) return;
-  const prog = document.getElementById("uploadProgress");
-  prog.innerText = `Saving ${files.length} photos...`;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const dataUrl = await readFileAsDataURL(file);
-    const pageId = `page_${activeCalcId}_${Date.now()}_${i}`;
-    const defaultLayout = (i % 2 === 0) ? "sheet1" : "sheet2";
-
-    await putRecord("pages", {
-      id: pageId,
-      calcId: activeCalcId,
-      date: activeDate,
-      filename: file.name,
-      pageNumber: i + 1,
-      layout: defaultLayout,
-      imageData: dataUrl,
-      verified: false,
-      rotation: 0
-    });
-  }
-  prog.innerText = `Uploaded ${files.length} pages.`;
-  setTimeout(() => { prog.innerText = ""; }, 2500);
-  await refreshDatePagesList();
-}
-
-function readFileAsDataURL(file) {
-  return new Promise((res, rej) => {
-    const reader = new FileReader();
-    reader.onload = () => res(reader.result);
-    reader.onerror = rej;
-    reader.readAsDataURL(file);
-  });
-}
-
-async function refreshDatePagesList() {
-  if (!activeCalcId) return;
-  const pages = (await getAllFromStore("pages")).filter(p => p.calcId === activeCalcId);
-  const container = document.getElementById("datePagesList");
-  const selector = document.getElementById("reviewPageSelector");
-
-  selector.innerHTML = '<option value="">Select a page to review...</option>';
-  if (!pages.length) {
-    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">No pages uploaded yet.</span>`;
-    return;
-  }
-
-  let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
-  pages.forEach((p, idx) => {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.text = `Page #${p.pageNumber || idx+1} (${p.layout === 'sheet1' ? 'Sheet 1: 1-40' : 'Sheet 2: 41-80+'}) - ${p.verified ? 'Verified' : 'Unreviewed'}`;
-    selector.appendChild(opt);
-
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:6px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.8rem;">
-        <div><strong>Page ${p.pageNumber || idx+1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending Extraction'}</span></div>
-        <button class="btn btn-outline btn-sm" onclick="selectPageForReview('${p.id}')">Open & Extract</button>
-      </div>
-    `;
-  });
-  html += `</div>`;
-  container.innerHTML = html;
-}
-
-async function selectPageForReview(pageId) {
-  document.getElementById("reviewPageSelector").value = pageId;
-  switchTab("screen-review");
-  await loadPageForReview();
-}
-
-async function loadPageForReview() {
-  const pageId = document.getElementById("reviewPageSelector").value;
-  if (!pageId) return;
-  activePage = await getRecord("pages", pageId);
-  if (!activePage) return;
-
-  document.getElementById("pageLayoutType").value = activePage.layout || "sheet1";
-  document.getElementById("reviewPageNumber").value = activePage.pageNumber || "";
-  currentRotation = activePage.rotation || 0;
-
-  if (activePage.imageData) {
-    currentImgElement = new Image();
-    currentImgElement.onload = drawCanvas;
-    currentImgElement.src = activePage.imageData;
-  } else {
-    currentImgElement = null;
-    drawCanvas();
-  }
-
-  await renderEntryGrid();
-}
-
-function rotateImage(deg) {
-  currentRotation = (currentRotation + deg) % 360;
-  if (currentRotation < 0) currentRotation += 360;
-  if (activePage) {
-    activePage.rotation = currentRotation;
-    putRecord("pages", activePage);
-  }
-  drawCanvas();
-}
-
-function zoomImage(factor) {
-  currentZoom *= factor;
-  if (currentZoom < 0.3) currentZoom = 0.3;
-  if (currentZoom > 4.0) currentZoom = 4.0;
-  drawCanvas();
-}
-
-function resetImageTransform() {
-  currentRotation = 0;
-  currentZoom = 1.0;
-  drawCanvas();
-}
-
-function drawCanvas() {
-  const canvas = document.getElementById("imageCanvas");
-  const ctx = canvas.getContext("2d");
-
-  if (!currentImgElement) {
-    canvas.width = 300;
-    canvas.height = 120;
-    ctx.fillStyle = "#2c3e50";
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#ffffff";
-    ctx.font = "12px sans-serif";
-    ctx.textAlign = "center";
-    ctx.fillText("Photo purged to save phone storage.", canvas.width / 2, 55);
-    ctx.fillText("All extracted numbers remain saved.", canvas.width / 2, 75);
-    return;
-  }
-
-  const is90or270 = (currentRotation === 90 || currentRotation === 270);
-  const w = is90or270 ? currentImgElement.height : currentImgElement.width;
-  const h = is90or270 ? currentImgElement.width : currentImgElement.height;
-
-  canvas.width = w * currentZoom;
-  canvas.height = h * currentZoom;
-
-  ctx.save();
-  ctx.scale(currentZoom, currentZoom);
-  ctx.translate(w / 2, h / 2);
-  ctx.rotate((currentRotation * Math.PI) / 180);
-  ctx.drawImage(currentImgElement, -currentImgElement.width / 2, -currentImgElement.height / 2);
-  ctx.restore();
 }
 
 async function renderEntryGrid() {
@@ -1012,7 +949,7 @@ async function exportReportCSV() {
 
   let csv = "Index,Medicine Name,Date,Total,Boundary\n";
   medicines.forEach((m, i) => {
-    csv += `${i+1},"${m.name.replace(/"/g, '""')}",${activeDate},${totals[m.id]},Rows 1-38\n`;
+    csv += `${i + 1},"${m.name.replace(/"/g, '""')}",${activeDate},${totals[m.id]},Rows 1-38\n`;
   });
   downloadBlob(csv, `consumption_${activeDate}.csv`, "text/csv;charset=utf-8;");
 }
@@ -1025,7 +962,7 @@ function exportReportHTML() {
 
 async function exportFullJSONBackup() {
   const backup = {
-    version: "6.0_WebDirect",
+    version: "7.0_Optimized",
     dateExported: new Date().toISOString(),
     medicines: await getAllFromStore("medicines"),
     runs: await getAllFromStore("runs"),
@@ -1050,12 +987,9 @@ function downloadBlob(content, filename, mimeType) {
   const blob = new Blob([content], { type: mimeType });
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
-  a.href = url;
-  a.download = filename;
-  document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
 }
 
 async function renderMedicineMaster() {
