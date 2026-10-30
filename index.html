@@ -1,0 +1,1064 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<title>Daily Medicine Consumption Ledger</title>
+<style>
+:root {
+  --primary: #005a9c; --primary-dark: #003e6b; --accent: #d9230f;
+  --bg: #f4f6f9; --card-bg: #ffffff; --text: #212529; --text-muted: #6c757d;
+  --border: #ced4da; --success: #28a745; --warning: #ffc107; --danger: #dc3545;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
+header { background: var(--primary); color: white; padding: 10px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
+header h1 { font-size: 1rem; font-weight: 600; }
+header .badge { background: rgba(255,255,255,0.25); padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; }
+nav.tabs { display: flex; background: var(--primary-dark); overflow-x: auto; white-space: nowrap; }
+nav.tabs button { flex: 1; min-width: 75px; padding: 10px 6px; border: none; background: transparent; color: #cfd8dc; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
+nav.tabs button.active { color: #ffffff; border-bottom: 3px solid #ffab00; background: rgba(255,255,255,0.08); font-weight: 700; }
+main { padding: 12px; max-width: 900px; margin: 0 auto; }
+.screen { display: none; }
+.screen.active { display: block; }
+.card { background: var(--card-bg); border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid var(--border); }
+.card-title { font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
+button.btn { padding: 8px 12px; border: none; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
+.btn-primary { background: var(--primary); color: white; }
+.btn-secondary { background: #6c757d; color: white; }
+.btn-success { background: var(--success); color: white; }
+.btn-danger { background: var(--danger); color: white; }
+.btn-outline { background: transparent; border: 1px solid var(--primary) !important; color: var(--primary); }
+.btn-sm { padding: 4px 8px; font-size: 0.75rem; }
+.btn-block { width: 100%; display: flex; margin-top: 6px; }
+button.btn:disabled { opacity: 0.6; cursor: not-allowed; }
+input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; margin-top: 4px; margin-bottom: 8px; background: white; color: var(--text); }
+label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
+.api-banner { background: #e8f4fd; border: 1px solid #b8daff; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8rem; }
+.row-boundary-rule { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #856404; }
+.viewer-container { position: relative; background: #1a1a1a; border-radius: 6px; overflow: hidden; margin-bottom: 10px; text-align: center; }
+.viewer-toolbar { display: flex; background: rgba(0,0,0,0.85); padding: 6px; gap: 6px; justify-content: center; flex-wrap: wrap; }
+.viewer-toolbar button { background: #495057; color: white; border: none; border-radius: 4px; padding: 5px 8px; font-size: 0.72rem; cursor: pointer; }
+.canvas-wrapper { overflow: auto; max-height: 380px; display: flex; justify-content: center; align-items: center; padding: 6px; }
+canvas#imageCanvas { max-width: 100%; height: auto; box-shadow: 0 0 10px rgba(0,0,0,0.6); }
+.med-row { padding: 8px; border-bottom: 1px solid #f0f0f0; }
+.med-row:nth-child(even) { background: #fafafa; }
+.med-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
+.med-name { font-size: 0.85rem; font-weight: 600; flex: 1; }
+.qty-input { width: 85px; text-align: right; font-weight: 700; margin: 0; padding: 6px; font-size: 1rem; border: 2px solid var(--primary); }
+.report-table-wrapper { overflow-x: auto; margin-top: 10px; }
+table.report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; }
+table.report-table th, table.report-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
+table.report-table th { background: #e9ecef; position: sticky; top: 0; }
+.num-cell { text-align: right; font-weight: 600; font-family: monospace; }
+.status-pill { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
+.pill-verified { background: #d4edda; color: #155724; }
+.pill-partial { background: #fff3cd; color: #856404; }
+.badge { background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
+@media print {
+  body { padding: 0; background: white; }
+  header, nav.tabs, .no-print, .api-banner { display: none !important; }
+  .screen { display: none !important; }
+  #screen-report { display: block !important; }
+  .card { border: none; box-shadow: none; padding: 0; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div>
+    <h1>Daily Medicine Consumption Ledger</h1>
+    <span style="font-size: 0.7rem; opacity: 0.85;">Web Vision Engine &bull; Rows 1–38 Strict</span>
+  </div>
+  <div class="badge" id="storageStatusBadge" style="background:#d9230f;">Script NOT running</div>
+</header>
+
+<nav class="tabs no-print">
+  <button class="tab-btn active" onclick="switchTab('screen-workspace')">1. Date &amp; Runs</button>
+  <button class="tab-btn" onclick="switchTab('screen-review')">2. OCR &amp; Review</button>
+  <button class="tab-btn" onclick="switchTab('screen-report')">3. Totals &amp; Reports</button>
+  <button class="tab-btn" onclick="switchTab('screen-master')">Medicines</button>
+  <button class="tab-btn" onclick="switchTab('screen-backup')">Storage &amp; Backup</button>
+</nav>
+
+<main>
+  <!-- TAB 1 -->
+  <section id="screen-workspace" class="screen active">
+    <div class="api-banner">
+      <label>Google AI Studio Gemini API Key (Saved in this browser):</label>
+      <input type="text" id="geminiApiKeyInput" placeholder="Paste your Gemini API Key here..." onchange="saveApiKey()" style="margin-bottom:0;">
+    </div>
+
+    <div class="card">
+      <div class="card-title">Calendar Date &amp; Calculation Run</div>
+      <label>Reporting Date</label>
+      <input type="date" id="selectedDateInput" onchange="onDateChanged()">
+      <label>Active Calculation Run on this Date</label>
+      <div style="display:flex; gap:6px;">
+        <select id="activeCalcSelector" onchange="onCalculationRunChanged()" style="margin:0;">
+          <option value="run_default">Calculation Run 1</option>
+        </select>
+        <button class="btn btn-outline btn-sm" onclick="promptNewCalculationRun()">+ New Run</button>
+        <button class="btn btn-secondary btn-sm" onclick="renameCurrentRun()">Rename</button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Upload Photos for <strong id="uploadTargetRunLabel" style="color:var(--primary);">Calculation Run 1</strong></span>
+      </div>
+      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
+        Select your register photos, then tap <strong>Load Selected Photos</strong>:
+      </p>
+      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
+        <input type="file" id="batchImageInput" accept="image/*" multiple onchange="onFileSelectionChanged()" style="flex:1; margin:0;">
+        <button class="btn btn-primary" id="btnProcessPhotos" onclick="processSelectedFiles()">Load Selected Photos</button>
+      </div>
+      <div id="uploadProgress" style="font-size:0.85rem; font-weight:700; margin-top:8px;"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pages in Active Run</div>
+      <div id="datePagesList">No pages uploaded yet.</div>
+    </div>
+  </section>
+
+  <!-- TAB 2 -->
+  <section id="screen-review" class="screen">
+    <div class="row-boundary-rule">
+      <strong>LOCKED REGISTER RULE:</strong> Rows 1 to 38 are strictly anchored to the printed <strong>SL NO (1 to 38)</strong> down the left side. Everything below SL #38 is strictly excluded.
+    </div>
+
+    <div class="card" style="border: 2px solid var(--primary);">
+      <div class="card-title">
+        <span>1-Click Auto-Extraction</span>
+        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px; text-transform:none; margin:0; cursor:pointer;">
+          <input type="checkbox" id="autoPurgeCheckbox" checked style="width:auto; margin:0;">
+          Purge photo after extraction
+        </label>
+      </div>
+      <button class="btn btn-primary btn-block" id="btnAutoExtract" onclick="runWebAutoExtraction()">Extract Numbers Automatically</button>
+      <div id="extractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Register Inspection Canvas</span>
+        <div style="display:flex; gap:6px;">
+          <select id="reviewPageSelector" style="width:auto; margin:0;" onchange="loadPageForReview()"></select>
+          <button class="btn btn-danger btn-sm" onclick="deleteActivePage()">Delete Page</button>
+        </div>
+      </div>
+
+      <div class="viewer-container">
+        <div class="viewer-toolbar">
+          <button onclick="rotateImage(-90)">&larr; Rotate 90&deg;</button>
+          <button onclick="rotateImage(90)">Rotate 90&deg; &rarr;</button>
+          <button onclick="zoomImage(1.2)">Zoom +</button>
+          <button onclick="zoomImage(0.8)">Zoom &minus;</button>
+          <button onclick="resetImageTransform()">Reset View</button>
+        </div>
+        <div class="canvas-wrapper"><canvas id="imageCanvas"></canvas></div>
+      </div>
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
+        <div>
+          <label>Layout Type</label>
+          <select id="pageLayoutType" onchange="onLayoutChanged()">
+            <option value="sheet1">Layout 1 (Sheet 1: Acetylsalicylic -&gt; Hydrochlorothiazide)</option>
+            <option value="sheet2">Layout 2 (Sheet 2: Ibuprofen -&gt; Zinc + Custom)</option>
+          </select>
+        </div>
+        <div>
+          <label>Page Number</label>
+          <input type="number" id="reviewPageNumber" placeholder="e.g. 1" onchange="updatePageMetadata()">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">
+        <span>Medicine Consumption (Rows 1–38)</span>
+        <span class="badge" id="entryProgressBadge">0 Saved</span>
+      </div>
+      <div id="medEntryList" style="max-height: 480px; overflow-y: auto;"></div>
+    </div>
+  </section>
+
+  <!-- TAB 3 -->
+  <section id="screen-report" class="screen">
+    <div class="card">
+      <div class="card-title no-print">
+        <span>Consumption Report</span>
+        <div style="display:flex; gap:6px;">
+          <button class="btn btn-primary btn-sm" onclick="window.print()">Print / PDF</button>
+          <button class="btn btn-outline btn-sm" onclick="exportReportCSV()">Export CSV</button>
+          <button class="btn btn-outline btn-sm" onclick="exportReportHTML()">Export HTML</button>
+        </div>
+      </div>
+
+      <div class="no-print" style="margin-bottom:12px; background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid var(--border);">
+        <label>Report Scope:</label>
+        <select id="reportScopeSelector" onchange="generateDailyReport()" style="margin-top:4px; font-weight:600;">
+          <option value="activeRun">Active Calculation Run Only</option>
+          <option value="combinedDate">Combined Grand Total (All Runs on this Date)</option>
+        </select>
+      </div>
+
+      <div id="reportHeaderSection" style="margin-bottom:12px;">
+        <h2 style="font-size:1.1rem; color:var(--primary-dark);">Daily Medicine Consumption Ledger</h2>
+        <div style="font-size:0.8rem; margin-top:4px; display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
+          <div><strong>Date:</strong> <span id="repDateTag">-</span></div>
+          <div><strong>Scope / Session:</strong> <span id="repRunTag" style="color:var(--primary); font-weight:700;">-</span></div>
+          <div><strong>Completeness:</strong> <span id="repCompletenessBadge" class="status-pill pill-partial">Checking...</span></div>
+          <div><strong>Pages Evaluated:</strong> <span id="repPagesCount">0</span></div>
+        </div>
+      </div>
+
+      <div class="report-table-wrapper">
+        <table class="report-table" id="dailyReportTable">
+          <thead>
+            <tr>
+              <th style="width: 35px;">#</th>
+              <th>Approved Medicine Name &amp; Strength</th>
+              <th>Sheet</th>
+              <th style="text-align:right;">Calculated Total</th>
+              <th>Status</th>
+              <th>Contributing Pages</th>
+            </tr>
+          </thead>
+          <tbody id="dailyReportTbody">
+            <tr><td colspan="6" style="text-align:center;">Select a date to display consumption.</td></tr>
+          </tbody>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- TAB 4 -->
+  <section id="screen-master" class="screen">
+    <div class="card">
+      <div class="card-title">Approved Medicine Master (<span id="medMasterCount">0</span>)</div>
+      <div id="masterMedList" style="max-height: 500px; overflow-y: auto;"></div>
+    </div>
+  </section>
+
+  <!-- TAB 5 -->
+  <section id="screen-backup" class="screen">
+    <div class="card">
+      <div class="card-title">Local Storage &amp; Full Backup</div>
+      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
+        All data is preserved locally in your browser's IndexedDB. Download a backup before clearing browser data.
+      </p>
+      <button class="btn btn-primary btn-block" onclick="exportFullJSONBackup()">Download Full JSON Backup</button>
+      <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);">
+      <button class="btn btn-outline btn-block" onclick="purgeAllProcessedPhotos()">Purge All Photos (Frees ~99% Phone Memory)</button>
+    </div>
+  </section>
+</main>
+
+<script>
+const SHEET1_NAMES = [
+  "Acetylsalicylic acid 75mg Tablet", "Albendazole 10ml Suspension", "Albendazole 400mg Tablet",
+  "Amitriptyline 25 mg Tablet", "Amlodipine 5mg Tablet", "Amoxicillin 125mg/5ml powder for Suspension 100ml",
+  "Amoxicillin 250 mg Capsule", "Amoxicillin 500mg Capsule", "Amoxicillin, 500mg + Clavulanic Acid, 125mg, Tablet",
+  "Antacid Tablet (aluminum and/or magnesium salts)", "Atenolol 50mg Tablet",
+  "Azithromycin 200mg/5ml powder for oral Suspension 15ml", "Azithromycin 250 mg Tablet",
+  "Azithromycin 500mg Tablet", "Bisoprolol 2.5mg Tablet", "Bromhexine Hydrochloride 4mg/5ml syrup",
+  "Calcium 500mg Tablet", "Carbonyl Iron 50mg + Folic Acid 0.5mg + Zinc Sulphate 61.8mg Capsule",
+  "Carbamazepine 200mg Tablet", "Cefixime 100mg/5ml Suspension", "Cefixime 200 mg Tablet",
+  "Cetirizine 10 mg Tablet", "Chloramphenicol 1% eye drops", "Chlorpheniramine maleate 2mg/ 5ml 100 ml oral solution",
+  "Ciprofloxacin 0.3% eye drops", "Ciprofloxacin 500mg Tablet", "Clotrimazole 1% cream",
+  "Clotrimazole vaginal 200mg Tablet", "Diazepam 5mg Tablet", "Diclofenac 50 mg Tablet",
+  "Domperidone 10mg Tablet", "Flucloxacillin 125mg/5ml oral Suspension", "Flucloxacillin 250mg Capsule",
+  "Flucloxacillin 500mg Capsule", "Fluconazole 50mg Capsule", "Fluoxetine 20mg Capsule",
+  "Furosemide 40mg Tablet", "Glibenclamide 5mg Tablet", "Gliclazide 80mg Tablet",
+  "Hydrochlorothiazide 12.5mg Tablet"
+];
+
+const SHEET2_NAMES = [
+  "Ibuprofen 400mg Tablet", "Lactulose 10g/15ml oral solution", "Losartan 50mg Tablet",
+  "Metformin 500 mg Tablet", "Methyldopa 250mg Tablet", "Metronidazole 400mg Tablet",
+  "Miconazole 2% cream", "Montelukast 10mg Tablet", "Multivitamin Tablet", "Mupirocin 2% ointment",
+  "Neomycin Sulphate + Bacitracin Zinc + Polymyxin B Sulphate", "Nystatin 100,000 IU/ml oral Suspension",
+  "Olanzapine 10 mg Tablet", "Omeprazole 20mg Capsule", "Ondansetron 4mg/5ml 50ml syrup",
+  "Ondansetron 8 mg Tablet", "Oral rehydration salts 10.25g/500ml", "Paracetamol 120mg/5ml oral solution",
+  "Paracetamol 500mg Tablet", "Paracetamol, 250mg, Supp", "Paracetamol, 500mg, Supp",
+  "Permethrin 5% cream/lotion", "Prednisolone 20mg Tablet", "Procyclidine Hydrochloride 5 mg Tablet",
+  "Risperidone 1 mg Tablet", "Rosuvastatin 10mg Tablet", "Salbutamol 0.1 mg/dose Inhaler",
+  "Salbutamol, syrup, 2mg/5ml in 100ml", "Silver sulfadiazine 1% cream", "Simeticone 67mg/ml paediatric drops",
+  "Sodium chloride 0.9% 10ml Nasal Drop", "Sodium valproate 200mg (valproic acid)",
+  "Sodium valproate 500mg Tablet (valproic acid)", "Tiemonium methylsulphate 50mg Tablet",
+  "Tolperisone, Hydrochloride, 50mg, Tablet", "Tranexamic acid 500mg Capsule",
+  "Vitamin B compound/complex Tablet", "Vitamin C (ascorbic acid) 250mg Tablet",
+  "Zinc dispersible 20mg Tablet", "Zinc sulphate syrup 2mg/ml, syrup",
+  "Cap Doxycycline 100mg", "Tab Montelukast 4mg", "Syr Ambroxol HCl", "P/D Ambroxol HCl",
+  "Tab Nitroglycerine 2.6mg", "Tab Bisoprolol 5mg", "Tab Cefuroxime 250mg", "Tab Levocetirizine 5mg"
+];
+
+const DEFAULT_IRC_MEDICINES = [
+  ...SHEET1_NAMES.map((name, i) => ({ id: i + 1, name, sheet: "sheet1", col: i + 1 })),
+  ...SHEET2_NAMES.map((name, i) => ({ id: i + 41, name, sheet: "sheet2", col: i + 1 }))
+];
+
+window.addEventListener("error", (e) => {
+  const p = document.getElementById("uploadProgress");
+  if (p) p.innerHTML = `<span style="color:#dc3545;">Error: ${e.message}</span>`;
+});
+window.addEventListener("unhandledrejection", (e) => {
+  const p = document.getElementById("uploadProgress");
+  if (p) p.innerHTML = `<span style="color:#dc3545;">Error: ${(e.reason && e.reason.message) || e.reason}</span>`;
+});
+
+// In-memory fallback in case IndexedDB fails on mobile Chrome
+window.MEMORY_PAGES = [];
+window.MEMORY_RUNS = [];
+window.MEMORY_ENTRIES = [];
+
+// Insert or replace a record (by key) in an in-memory array
+function upsertMemory(arr, keyField, record) {
+  const i = arr.findIndex(r => r[keyField] === record[keyField]);
+  if (i >= 0) arr[i] = record; else arr.push(record);
+}
+
+const DB_NAME = "DailyMedicineLedgerDB_V5";
+let db = null;
+
+function initIndexedDB() {
+  return new Promise((resolve) => {
+    try {
+      const request = indexedDB.open(DB_NAME, 1);
+      request.onupgradeneeded = (e) => {
+        const d = e.target.result;
+        if (!d.objectStoreNames.contains("medicines")) d.createObjectStore("medicines", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "calcId" });
+        if (!d.objectStoreNames.contains("pages")) d.createObjectStore("pages", { keyPath: "id" });
+        if (!d.objectStoreNames.contains("entries")) d.createObjectStore("entries", { keyPath: "key" });
+      };
+      request.onsuccess = async (e) => {
+        db = e.target.result;
+        await seedMedicines();
+        resolve(db);
+      };
+      request.onerror = () => resolve(null);
+    } catch (e) { resolve(null); }
+  });
+}
+
+async function seedMedicines() {
+  if (!db) return;
+  try {
+    const count = await getCount("medicines");
+    if (count === 0) {
+      const tx = db.transaction("medicines", "readwrite");
+      const store = tx.objectStore("medicines");
+      DEFAULT_IRC_MEDICINES.forEach(m => store.put(m));
+      await new Promise(r => { tx.oncomplete = r; tx.onerror = r; tx.onabort = r; });
+    }
+  } catch (e) {}
+}
+
+function getCount(storeName) {
+  return new Promise((res) => {
+    if (!db) return res(0);
+    try {
+      const req = db.transaction(storeName, "readonly").objectStore(storeName).count();
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(0);
+    } catch (e) { res(0); }
+  });
+}
+
+function getAllFromStore(storeName) {
+  return new Promise((res) => {
+    if (!db) return res([]);
+    try {
+      const req = db.transaction(storeName, "readonly").objectStore(storeName).getAll();
+      req.onsuccess = () => res(req.result || []);
+      req.onerror = () => res([]);
+    } catch (e) { res([]); }
+  });
+}
+
+function putRecord(storeName, record) {
+  return new Promise((res) => {
+    if (!db) return res();
+    try {
+      const req = db.transaction(storeName, "readwrite").objectStore(storeName).put(record);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res();
+    } catch (e) { res(); }
+  });
+}
+
+function getRecord(storeName, key) {
+  return new Promise((res) => {
+    if (!db) return res(null);
+    try {
+      const req = db.transaction(storeName, "readonly").objectStore(storeName).get(key);
+      req.onsuccess = () => res(req.result);
+      req.onerror = () => res(null);
+    } catch (e) { res(null); }
+  });
+}
+
+function deleteRecord(storeName, key) {
+  return new Promise((res) => {
+    if (!db) return res();
+    try {
+      const req = db.transaction(storeName, "readwrite").objectStore(storeName).delete(key);
+      req.onsuccess = () => res();
+      req.onerror = () => res();
+    } catch (e) { res(); }
+  });
+}
+
+// Resize high-res phone photo to a lightweight JPEG
+function compressImage(file, maxDimension = 1600, quality = 0.85) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        let w = img.width, h = img.height;
+        if (w > maxDimension || h > maxDimension) {
+          if (w > h) { h = Math.round((h * maxDimension) / w); w = maxDimension; }
+          else { w = Math.round((w * maxDimension) / h); h = maxDimension; }
+        }
+        const canvas = document.createElement("canvas");
+        canvas.width = w; canvas.height = h;
+        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
+        resolve(canvas.toDataURL("image/jpeg", quality));
+      };
+      img.onerror = () => reject(new Error("Image decode failed"));
+      img.src = e.target.result;
+    };
+    reader.onerror = () => reject(new Error("File read error"));
+    reader.readAsDataURL(file);
+  });
+}
+
+function readFileRaw(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = (e) => resolve(e.target.result);
+    reader.onerror = reject;
+    reader.readAsDataURL(file);
+  });
+}
+
+let activeDate = "2026-02-10";
+let activeCalcId = "run_default";
+let activeRun = { calcId: "run_default", label: "Calculation Run 1", date: "2026-02-10" };
+let activePage = null;
+let currentRotation = 0;
+let currentZoom = 1.0;
+let currentImgElement = null;
+
+window.addEventListener("DOMContentLoaded", async () => {
+  await initIndexedDB();
+  const sb = document.getElementById("storageStatusBadge");
+  sb.innerText = db ? "Ready ✓" : "Ready (no DB)"; sb.style.background = db ? "#28a745" : "#ffc107";
+  document.getElementById("selectedDateInput").value = activeDate;
+  loadApiKey();
+  await ensureActiveRun();
+  await refreshDatePagesList();
+});
+
+function switchTab(screenId) {
+  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
+  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
+  document.getElementById(screenId).classList.add("active");
+  const btn = Array.from(document.querySelectorAll(".tab-btn")).find(b => b.getAttribute("onclick").includes(screenId));
+  if (btn) btn.classList.add("active");
+
+  if (screenId === "screen-report") generateDailyReport();
+  if (screenId === "screen-master") renderMedicineMaster();
+  if (screenId === "screen-review" && activePage) loadPageForReview();
+}
+
+function saveApiKey() {
+  try { localStorage.setItem("gemini_api_key", document.getElementById("geminiApiKeyInput").value.trim()); } catch (e) {}
+}
+
+function loadApiKey() {
+  let k = "";
+  try { k = localStorage.getItem("gemini_api_key") || ""; } catch (e) {}
+  document.getElementById("geminiApiKeyInput").value = k;
+}
+
+async function ensureActiveRun() {
+  activeDate = document.getElementById("selectedDateInput").value || "2026-02-10";
+  let allRuns = await getAllFromStore("runs");
+  if (!allRuns.length && window.MEMORY_RUNS.length) allRuns = window.MEMORY_RUNS;
+  let dateRuns = allRuns.filter(r => r.date === activeDate);
+
+  if (dateRuns.length === 0) {
+    const initialRun = { calcId: `run_${activeDate}_${Date.now()}`, date: activeDate, label: "Calculation Run 1" };
+    await putRecord("runs", initialRun);
+    upsertMemory(window.MEMORY_RUNS, "calcId", initialRun);
+    dateRuns = [initialRun];
+  }
+
+  const selector = document.getElementById("activeCalcSelector");
+  selector.innerHTML = "";
+  dateRuns.forEach(r => {
+    const opt = document.createElement("option");
+    opt.value = r.calcId;
+    opt.text = r.label;
+    selector.appendChild(opt);
+  });
+
+  // FIX: keep the currently selected run if it belongs to this date
+  const keep = dateRuns.find(r => r.calcId === activeCalcId) || dateRuns[0];
+  activeCalcId = keep.calcId;
+  activeRun = keep;
+  selector.value = activeCalcId;
+  document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
+}
+
+async function onDateChanged() {
+  await ensureActiveRun();
+  await refreshDatePagesList();
+}
+
+async function onCalculationRunChanged() {
+  activeCalcId = document.getElementById("activeCalcSelector").value;
+  activeRun = await getRecord("runs", activeCalcId);
+  if (!activeRun) activeRun = window.MEMORY_RUNS.find(r => r.calcId === activeCalcId);
+  if (activeRun) document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
+  await refreshDatePagesList();
+}
+
+async function promptNewCalculationRun() {
+  const name = prompt(`Enter name for new calculation on ${activeDate}:`, "Shift 2");
+  if (!name || !name.trim()) return;
+  const newRun = { calcId: `run_${activeDate}_${Date.now()}`, date: activeDate, label: name.trim() };
+  await putRecord("runs", newRun);
+  upsertMemory(window.MEMORY_RUNS, "calcId", newRun);
+  activeCalcId = newRun.calcId;   // select the new run before refreshing the list
+  await ensureActiveRun();
+  await onCalculationRunChanged();
+}
+
+async function renameCurrentRun() {
+  if (!activeRun) return;
+  const newName = prompt("Rename this calculation run:", activeRun.label);
+  if (!newName || !newName.trim()) return;
+  activeRun.label = newName.trim();
+  await putRecord("runs", activeRun);
+  upsertMemory(window.MEMORY_RUNS, "calcId", activeRun);
+  await ensureActiveRun();
+}
+
+function onFileSelectionChanged() {
+  const count = (document.getElementById("batchImageInput").files || []).length;
+  const btn = document.getElementById("btnProcessPhotos");
+  if (count > 0) {
+    btn.innerText = `Loading ${count} photos...`;
+    btn.style.background = "#28a745";
+    processSelectedFiles();
+  } else {
+    btn.innerText = "Load Selected Photos";
+    btn.style.background = "#005a9c";
+  }
+}
+
+let uploading = false;
+async function processSelectedFiles() {
+  if (uploading) return;
+  const input = document.getElementById("batchImageInput");
+  const files = Array.from(input.files || []);
+  const prog = document.getElementById("uploadProgress");
+
+  if (!files.length) {
+    alert("Please tap 'Choose Files' and select your register photos first.");
+    return;
+  }
+
+  uploading = true;
+  let undecodable = 0;
+  prog.innerHTML = `<span style="color:#005a9c;">Preparing to load ${files.length} photos...</span>`;
+
+  try {
+    await ensureActiveRun();
+
+    for (let i = 0; i < files.length; i++) {
+      prog.innerHTML = `<span style="color:#005a9c;">Processing photo ${i + 1} of ${files.length} (${files[i].name})...</span>`;
+
+      let dataUrl = "";
+      try { dataUrl = await compressImage(files[i]); }
+      catch (err) { undecodable++; dataUrl = await readFileRaw(files[i]); }
+
+      const pageRecord = {
+        id: `page_${activeCalcId}_${Date.now()}_${i}`,
+        calcId: activeCalcId,
+        date: activeDate,
+        filename: files[i].name,
+        pageNumber: i + 1,
+        layout: (i % 2 === 0) ? "sheet1" : "sheet2",
+        imageData: dataUrl,
+        verified: false,
+        rotation: 0
+      };
+
+      await putRecord("pages", pageRecord);
+      upsertMemory(window.MEMORY_PAGES, "id", pageRecord);
+    }
+
+    prog.innerHTML = `<span style="color:var(--success);">Successfully loaded ${files.length} photos! See list below.</span>` +
+      (undecodable ? `<br><span style="color:#dc3545;">${undecodable} photo(s) could not be decoded (HEIC/unsupported format?). Re-take as JPEG.</span>` : "");
+    input.value = "";
+    onFileSelectionChanged();
+    await refreshDatePagesList();
+  } catch (err) {
+    prog.innerHTML = `<span style="color:var(--danger);">Upload error: ${err.message}</span>`;
+  } finally {
+    uploading = false;
+    onFileSelectionChanged();
+  }
+}
+
+async function refreshDatePagesList() {
+  await ensureActiveRun();
+  let allPages = await getAllFromStore("pages");
+  if (!allPages.length && window.MEMORY_PAGES.length) allPages = window.MEMORY_PAGES;
+
+  const pages = allPages.filter(p => p.calcId === activeCalcId);
+  const container = document.getElementById("datePagesList");
+  const selector = document.getElementById("reviewPageSelector");
+
+  selector.innerHTML = '<option value="">Select a page to review...</option>';
+  if (!pages.length) {
+    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">No pages uploaded yet for this run.</span>`;
+    return;
+  }
+
+  let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
+  pages.forEach((p, idx) => {
+    const opt = document.createElement("option");
+    opt.value = p.id;
+    opt.text = `Page #${p.pageNumber || idx + 1} (${p.layout === 'sheet1' ? 'Sheet 1: 1-40' : 'Sheet 2: 41-88'}) - ${p.verified ? 'Verified' : 'Pending'}`;
+    selector.appendChild(opt);
+
+    html += `
+      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.85rem;">
+        <div><strong>Page ${p.pageNumber || idx + 1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending'}</span></div>
+        <button class="btn btn-primary btn-sm" onclick="selectPageForReview('${p.id}')">Open &amp; Extract</button>
+      </div>`;
+  });
+  html += `</div>`;
+  container.innerHTML = html;
+}
+
+async function selectPageForReview(pageId) {
+  document.getElementById("reviewPageSelector").value = pageId;
+  switchTab("screen-review");
+  await loadPageForReview();
+}
+
+async function loadPageForReview() {
+  const pageId = document.getElementById("reviewPageSelector").value;
+  if (!pageId) return;
+  activePage = await getRecord("pages", pageId);
+  if (!activePage) activePage = window.MEMORY_PAGES.find(p => p.id === pageId);
+  if (!activePage) return;
+
+  document.getElementById("pageLayoutType").value = activePage.layout || "sheet1";
+  document.getElementById("reviewPageNumber").value = activePage.pageNumber || "";
+  currentRotation = activePage.rotation || 0;
+  currentZoom = 1.0;
+
+  if (activePage.imageData) {
+    currentImgElement = new Image();
+    currentImgElement.onload = drawCanvas;
+    currentImgElement.src = activePage.imageData;
+  } else {
+    currentImgElement = null;
+    drawCanvas();
+  }
+  await renderEntryGrid();
+}
+
+function rotateImage(deg) {
+  currentRotation = (currentRotation + deg) % 360;
+  if (currentRotation < 0) currentRotation += 360;
+  if (activePage) {
+    activePage.rotation = currentRotation;
+    putRecord("pages", activePage);
+  }
+  drawCanvas();
+}
+
+function zoomImage(factor) {
+  currentZoom = Math.min(4.0, Math.max(0.3, currentZoom * factor));
+  drawCanvas();
+}
+
+function resetImageTransform() {
+  currentRotation = 0; currentZoom = 1.0; drawCanvas();
+}
+
+function drawCanvas() {
+  const canvas = document.getElementById("imageCanvas");
+  const ctx = canvas.getContext("2d");
+
+  if (!currentImgElement) {
+    canvas.width = 300; canvas.height = 120;
+    ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.fillStyle = "#ffffff"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
+    ctx.fillText("Photo purged to save storage.", canvas.width / 2, 55);
+    ctx.fillText("Extracted numbers remain saved.", canvas.width / 2, 75);
+    return;
+  }
+
+  const is90or270 = (currentRotation === 90 || currentRotation === 270);
+  const w = is90or270 ? currentImgElement.height : currentImgElement.width;
+  const h = is90or270 ? currentImgElement.width : currentImgElement.height;
+
+  canvas.width = w * currentZoom;
+  canvas.height = h * currentZoom;
+
+  ctx.save();
+  ctx.scale(currentZoom, currentZoom);
+  ctx.translate(w / 2, h / 2);
+  ctx.rotate((currentRotation * Math.PI) / 180);
+  ctx.drawImage(currentImgElement, -currentImgElement.width / 2, -currentImgElement.height / 2);
+  ctx.restore();
+}
+
+// Auto-discover an available model for the user's API key
+async function findActiveModel(apiKey) {
+  try {
+    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
+    const data = await res.json();
+    const models = (data.models || [])
+      .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
+      .map(m => m.name.replace("models/", ""));
+    const flash = models.filter(m => m.toLowerCase().includes("flash"));
+    if (flash.length) return flash[0];
+    if (models.length) return models[0];
+  } catch (e) {}
+  return "gemini-1.5-flash-latest";
+}
+
+// 1-click extraction; the totals are summed in JavaScript, not by the AI
+async function runWebAutoExtraction() {
+  if (!activePage || !activePage.imageData) {
+    return alert("Please select a page with an uploaded photo first.");
+  }
+  const apiKey = document.getElementById("geminiApiKeyInput").value.trim();
+  if (!apiKey) return alert("Please paste your Gemini API key in the top box.");
+
+  const msg = document.getElementById("extractMsg");
+  const btn = document.getElementById("btnAutoExtract");
+  btn.disabled = true;
+  msg.innerText = "Discovering active Gemini model...";
+
+  try {
+    const model = await findActiveModel(apiKey);
+    msg.innerText = `Extracting numbers using ${model}...`;
+
+    const base64Data = activePage.imageData.split(",")[1];
+
+    // FIX: JavaScript needs an explicit join (adjacent strings are a syntax error)
+    const prompt = [
+      "You are an expert hospital ledger extraction system.",
+      "Step 1: Identify if this page is Sheet 1 (contains patient names and starts with Acetylsalicylic acid) or Sheet 2 (starts with Ibuprofen, ends with Zinc and handwritten columns).",
+      "Step 2: Read every handwritten consumption number in each medicine column strictly between numbered rows 1 and 38.",
+      "CRITICAL ROW ANCHOR RULE:",
+      "- Look at the printed 'SL NO' column running down the LEFT margin.",
+      "- Row 1 aligns strictly with SL #1. Row 38 aligns strictly with SL #38.",
+      "- Extract numbers ONLY from cells horizontally aligned with SL #1 through SL #38.",
+      "- STRICTLY IGNORE any numbers or text below SL #38 (e.g. daily totals, remarks, signatures).",
+      "- STRICTLY IGNORE patient names, registration numbers, serial numbers, and stock columns (A, B, C).",
+      "- Return a valid raw JSON object with keys:",
+      "  \"layout\": \"sheet1\" or \"sheet2\",",
+      "  \"readings\": { \"Medicine Exact Name\": [list of numbers found in rows 1 to 38] }",
+      "Example: {\"layout\": \"sheet2\", \"readings\": {\"Metformin 500 mg Tablet\": [15, 30]}}",
+      "Do NOT calculate the sum. Output only valid JSON without markdown formatting."
+    ].join("\n");
+
+    const body = JSON.stringify({
+      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } }] }],
+      generationConfig: { temperature: 0.0 }
+    });
+
+    let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
+      method: "POST", headers: { "Content-Type": "application/json" }, body
+    });
+    if (!response.ok) {
+      response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
+        method: "POST", headers: { "Content-Type": "application/json" }, body
+      });
+    }
+
+    const data = await response.json();
+    if (data.error) throw new Error(data.error.message);
+
+    let rawReply = data.candidates[0].content.parts[0].text.trim();
+    if (rawReply.startsWith("```json")) rawReply = rawReply.substring(7);
+    if (rawReply.startsWith("```")) rawReply = rawReply.substring(3);
+    if (rawReply.endsWith("```")) rawReply = rawReply.substring(0, rawReply.length - 3);
+
+    const parsed = JSON.parse(rawReply.trim());
+    const layout = (parsed.layout || "sheet1").toLowerCase();
+    const readings = parsed.readings || {};
+
+    activePage.layout = layout;
+    document.getElementById("pageLayoutType").value = layout;
+
+    const allMeds = await getAllFromStore("medicines");
+    const currentMeds = (allMeds.length ? allMeds : DEFAULT_IRC_MEDICINES).filter(m => m.sheet === layout);
+
+    for (const m of currentMeds) {
+      const rawList = readings[m.name] || [];
+      const cleanNums = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n >= 0 && n <= 5000);
+      const total = cleanNums.reduce((a, b) => a + b, 0);
+
+      const entry = {
+        key: `${activePage.id}_med_${m.id}`,
+        pageId: activePage.id,
+        calcId: activePage.calcId,
+        date: activePage.date || activeDate,
+        medId: m.id,
+        quantity: total,
+        verified: true,
+        rowsRange: "1-38",
+        updated: Date.now()
+      };
+      await putRecord("entries", entry);
+      upsertMemory(window.MEMORY_ENTRIES, "key", entry);
+    }
+
+    activePage.verified = true;
+
+    if (document.getElementById("autoPurgeCheckbox").checked) {
+      activePage.imageData = null;
+      currentImgElement = null;
+      drawCanvas();
+    }
+
+    await putRecord("pages", activePage);
+    upsertMemory(window.MEMORY_PAGES, "id", activePage);
+    msg.innerText = "Extraction complete! All numbers saved. Please check them below.";
+    await renderEntryGrid();
+    await refreshDatePagesList();
+  } catch (err) {
+    msg.innerText = "Extraction failed: " + err.message;
+  } finally {
+    btn.disabled = false;
+  }
+}
+
+async function renderEntryGrid() {
+  if (!activePage) return;
+  const layout = activePage.layout || "sheet1";
+  let allMeds = await getAllFromStore("medicines");
+  if (!allMeds.length) allMeds = DEFAULT_IRC_MEDICINES;
+  const filteredMeds = allMeds.filter(m => m.sheet === layout);
+
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length && window.MEMORY_ENTRIES.length) allEntries = window.MEMORY_ENTRIES;
+
+  const entryMap = {};
+  allEntries.filter(e => e.pageId === activePage.id).forEach(e => { entryMap[e.medId] = e; });
+
+  let html = "";
+  let verifiedCount = 0;
+
+  filteredMeds.forEach(m => {
+    const entry = entryMap[m.id];
+    const val = (entry && entry.quantity !== null && entry.quantity !== undefined) ? entry.quantity : "";
+    if (entry && entry.verified) verifiedCount++;
+    html += `
+      <div class="med-row">
+        <div class="med-header">
+          <div class="med-name">${m.col}. ${m.name}</div>
+          <input type="number" min="0" step="1" class="qty-input" id="qty_input_${m.id}"
+            value="${val}" placeholder="0" onchange="onManualQtyChanged(${m.id})">
+        </div>
+      </div>`;
+  });
+
+  document.getElementById("medEntryList").innerHTML = html;
+  document.getElementById("entryProgressBadge").innerText = `${verifiedCount} Saved`;
+}
+
+async function onManualQtyChanged(medId) {
+  if (!activePage) return;
+  const qty = parseInt(document.getElementById(`qty_input_${medId}`).value, 10) || 0;
+  const entry = {
+    key: `${activePage.id}_med_${medId}`,
+    pageId: activePage.id,
+    calcId: activePage.calcId,
+    date: activePage.date || activeDate,
+    medId: medId,
+    quantity: qty,
+    verified: true,
+    rowsRange: "1-38",
+    updated: Date.now()
+  };
+  await putRecord("entries", entry);
+  upsertMemory(window.MEMORY_ENTRIES, "key", entry);  // FIX: no duplicates
+}
+
+async function onLayoutChanged() {
+  if (!activePage) return;
+  activePage.layout = document.getElementById("pageLayoutType").value;
+  await putRecord("pages", activePage);
+  upsertMemory(window.MEMORY_PAGES, "id", activePage);
+  await renderEntryGrid();
+}
+
+async function updatePageMetadata() {
+  if (!activePage) return;
+  activePage.pageNumber = parseInt(document.getElementById("reviewPageNumber").value, 10) || 1;
+  await putRecord("pages", activePage);
+  upsertMemory(window.MEMORY_PAGES, "id", activePage);
+  await refreshDatePagesList();
+}
+
+async function deleteActivePage() {
+  if (!activePage) return;
+  if (!confirm("Delete this page?")) return;
+  const id = activePage.id;
+  await deleteRecord("pages", id);
+  // remove this page's entries too, so totals stay correct
+  const allEntries = await getAllFromStore("entries");
+  for (const e of allEntries.filter(e => e.pageId === id)) await deleteRecord("entries", e.key);
+  window.MEMORY_PAGES = window.MEMORY_PAGES.filter(p => p.id !== id);
+  window.MEMORY_ENTRIES = window.MEMORY_ENTRIES.filter(e => e.pageId !== id);
+  alert("Page deleted.");
+  activePage = null;
+  currentImgElement = null;
+  drawCanvas();
+  await refreshDatePagesList();
+  switchTab("screen-workspace");
+}
+
+async function generateDailyReport() {
+  const scope = document.getElementById("reportScopeSelector").value;
+  document.getElementById("repDateTag").innerText = activeDate;
+
+  let allPages = await getAllFromStore("pages");
+  if (!allPages.length) allPages = window.MEMORY_PAGES;
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
+  let medicines = await getAllFromStore("medicines");
+  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
+
+  let pages, entries;
+  if (scope === "activeRun") {
+    document.getElementById("repRunTag").innerText = activeRun ? activeRun.label : "Active Run";
+    pages = allPages.filter(p => p.calcId === activeCalcId);
+    entries = allEntries.filter(e => e.calcId === activeCalcId);
+  } else {
+    document.getElementById("repRunTag").innerText = "ALL RUNS COMBINED (Grand Daily Total)";
+    pages = allPages.filter(p => p.date === activeDate);
+    entries = allEntries.filter(e => e.date === activeDate);
+  }
+
+  document.getElementById("repPagesCount").innerText = `${pages.length} pages`;
+  const allVerified = pages.length > 0 && pages.every(p => p.verified);
+  const badge = document.getElementById("repCompletenessBadge");
+  badge.innerText = allVerified ? "VERIFIED (Rows 1–38)" : "PARTIAL";
+  badge.className = `status-pill ${allVerified ? 'pill-verified' : 'pill-partial'}`;
+
+  const totalsByMed = {};
+  medicines.forEach(m => { totalsByMed[m.id] = { total: 0, pages: new Set() }; });
+  entries.forEach(e => {
+    if (totalsByMed[e.medId]) {
+      totalsByMed[e.medId].total += parseInt(e.quantity, 10) || 0;
+      totalsByMed[e.medId].pages.add(e.pageId);
+    }
+  });
+
+  let tbodyHtml = "";
+  medicines.forEach((m, idx) => {
+    const agg = totalsByMed[m.id];
+    tbodyHtml += `
+      <tr>
+        <td>${idx + 1}</td>
+        <td><strong>${m.name}</strong></td>
+        <td>${m.sheet === 'sheet1' ? 'Sheet 1 (1-40)' : 'Sheet 2 (41-88)'}</td>
+        <td class="num-cell">${agg.total}</td>
+        <td><span class="status-pill ${agg.pages.size ? 'pill-verified' : 'pill-partial'}">${agg.pages.size ? 'Verified' : 'No data'}</span></td>
+        <td style="font-size:0.75rem; color:var(--text-muted);">${agg.pages.size} pages</td>
+      </tr>`;
+  });
+  document.getElementById("dailyReportTbody").innerHTML = tbodyHtml;
+}
+
+async function exportReportCSV() {
+  const scope = document.getElementById("reportScopeSelector").value;
+  let medicines = await getAllFromStore("medicines");
+  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
+  let allEntries = await getAllFromStore("entries");
+  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
+
+  const entries = (scope === "activeRun") ? allEntries.filter(e => e.calcId === activeCalcId) : allEntries.filter(e => e.date === activeDate);
+  const totals = {};
+  medicines.forEach(m => { totals[m.id] = 0; });
+  entries.forEach(e => { if (totals[e.medId] !== undefined) totals[e.medId] += parseInt(e.quantity, 10) || 0; });
+
+  let csv = "Index,Medicine Name,Date,Total,Boundary\n";
+  medicines.forEach((m, i) => {
+    csv += `${i + 1},"${m.name.replace(/"/g, '""')}",${activeDate},${totals[m.id]},Rows 1-38\n`;
+  });
+  downloadBlob(csv, `consumption_${activeDate}.csv`, "text/csv;charset=utf-8;");
+}
+
+function exportReportHTML() {
+  const content = document.getElementById("screen-report").innerHTML;
+  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Report ${activeDate}</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}.num-cell{text-align:right;font-weight:bold;}.no-print{display:none;}</style></head><body>${content}</body></html>`;
+  downloadBlob(doc, `report_${activeDate}.html`, "text/html;charset=utf-8;");
+}
+
+async function exportFullJSONBackup() {
+  const backup = {
+    version: "8.1",
+    dateExported: new Date().toISOString(),
+    medicines: await getAllFromStore("medicines"),
+    runs: await getAllFromStore("runs"),
+    pages: await getAllFromStore("pages"),
+    entries: await getAllFromStore("entries")
+  };
+  downloadBlob(JSON.stringify(backup, null, 2), `ledger_backup_${Date.now()}.json`, "application/json");
+}
+
+async function purgeAllProcessedPhotos() {
+  if (!confirm("Purge all camera photos? All calculated numbers and reports are kept 100%.")) return;
+  const pages = await getAllFromStore("pages");
+  for (const p of pages) {
+    p.imageData = null;
+    await putRecord("pages", p);
+  }
+  window.MEMORY_PAGES.forEach(p => p.imageData = null);
+  alert("All photos purged from browser storage.");
+  await refreshDatePagesList();
+}
+
+function downloadBlob(content, filename, mimeType) {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url; a.download = filename;
+  document.body.appendChild(a); a.click();
+  document.body.removeChild(a); URL.revokeObjectURL(url);
+}
+
+async function renderMedicineMaster() {
+  let meds = await getAllFromStore("medicines");
+  if (!meds.length) meds = DEFAULT_IRC_MEDICINES;
+  document.getElementById("medMasterCount").innerText = meds.length;
+  let html = "";
+  meds.forEach(m => {
+    html += `<div class="med-row"><div><strong>${m.id}. ${m.name}</strong><div style="font-size:0.7rem; color:var(--text-muted);">${m.sheet} &bull; Col ${m.col}</div></div></div>`;
+  });
+  document.getElementById("masterMedList").innerHTML = html;
+}
+</script>
+</body>
+</html>
