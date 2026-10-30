@@ -39,13 +39,16 @@ label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-tran
 .viewer-container { position: relative; background: #1a1a1a; border-radius: 6px; overflow: hidden; margin-bottom: 10px; text-align: center; }
 .viewer-toolbar { display: flex; background: rgba(0,0,0,0.85); padding: 6px; gap: 6px; justify-content: center; flex-wrap: wrap; }
 .viewer-toolbar button { background: #495057; color: white; border: none; border-radius: 4px; padding: 5px 8px; font-size: 0.72rem; cursor: pointer; }
-.canvas-wrapper { overflow: auto; max-height: 380px; display: flex; justify-content: center; align-items: center; padding: 6px; }
-canvas#imageCanvas { max-width: 100%; height: auto; box-shadow: 0 0 10px rgba(0,0,0,0.6); }
+.canvas-wrapper { overflow: auto; max-height: 34vh; display: block; padding: 6px; -webkit-overflow-scrolling: touch; }
+canvas#imageCanvas { display: block; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.6); }
+.sticky-viewer { position: sticky; top: 46px; z-index: 90; }
+.quick-input { font-size: 1.5rem; text-align: right; font-weight: 700; border: 2px solid var(--primary); margin: 0; }
+.warn { color: #b35c00; font-weight: 700; }
 .med-row { padding: 8px; border-bottom: 1px solid #f0f0f0; }
 .med-row:nth-child(even) { background: #fafafa; }
 .med-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .med-name { font-size: 0.85rem; font-weight: 600; flex: 1; }
-.qty-input { width: 85px; text-align: right; font-weight: 700; margin: 0; padding: 6px; font-size: 1rem; border: 2px solid var(--primary); }
+.qty-input { width: 120px; text-align: right; font-weight: 700; margin: 0; padding: 6px; font-size: 1rem; border: 2px solid var(--primary); }
 .report-table-wrapper { overflow-x: auto; margin-top: 10px; }
 table.report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; }
 table.report-table th, table.report-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
@@ -54,6 +57,7 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 .status-pill { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
 .pill-verified { background: #d4edda; color: #155724; }
 .pill-partial { background: #fff3cd; color: #856404; }
+.pill-bad { background: #f8d7da; color: #721c24; }
 .badge { background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
 @media print {
   body { padding: 0; background: white; }
@@ -69,7 +73,7 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 <header>
   <div>
     <h1>Daily Medicine Consumption Ledger</h1>
-    <span style="font-size: 0.7rem; opacity: 0.85;">Web Vision Engine &bull; Rows 1–38 Strict</span>
+    <span style="font-size: 0.7rem; opacity: 0.85;">Manual Entry &bull; Register-Verified</span>
   </div>
   <div class="badge" id="storageStatusBadge" style="background:#d9230f;">Script NOT running</div>
 </header>
@@ -85,11 +89,6 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 <main>
   <!-- TAB 1 -->
   <section id="screen-workspace" class="screen active">
-    <div class="api-banner">
-      <label>Google AI Studio Gemini API Key (Saved in this browser):</label>
-      <input type="text" id="geminiApiKeyInput" placeholder="Paste your Gemini API Key here..." onchange="saveApiKey()" style="margin-bottom:0;">
-    </div>
-
     <div class="card">
       <div class="card-title">Calendar Date &amp; Calculation Run</div>
       <label>Reporting Date</label>
@@ -126,48 +125,20 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
 
   <!-- TAB 2 -->
   <section id="screen-review" class="screen">
-    <div class="row-boundary-rule">
-      <strong>LOCKED REGISTER RULE:</strong> Rows 1 to 38 are strictly anchored to the printed <strong>SL NO (1 to 38)</strong> down the left side. Everything below SL #38 is strictly excluded.
-    </div>
-
-    <div class="card" style="border: 2px solid var(--primary);">
-      <div class="card-title">
-        <span>1-Click Auto-Extraction</span>
-        <label style="font-size:0.7rem; display:flex; align-items:center; gap:4px; text-transform:none; margin:0; cursor:pointer;">
-          <input type="checkbox" id="autoPurgeCheckbox" checked style="width:auto; margin:0;">
-          Purge photo after extraction
-        </label>
-      </div>
-      <button class="btn btn-primary btn-block" id="btnAutoExtract" onclick="runWebAutoExtraction()">Extract Numbers Automatically</button>
-      <div id="extractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
-    </div>
-
     <div class="card">
       <div class="card-title">
-        <span>Register Inspection Canvas</span>
+        <span>Page</span>
         <div style="display:flex; gap:6px;">
-          <select id="reviewPageSelector" style="width:auto; margin:0;" onchange="loadPageForReview()"></select>
-          <button class="btn btn-danger btn-sm" onclick="deleteActivePage()">Delete Page</button>
+          <select id="reviewPageSelector" style="width:auto; max-width:200px; margin:0;" onchange="loadPageForReview()"></select>
+          <button class="btn btn-danger btn-sm" onclick="deleteActivePage()">Delete</button>
         </div>
       </div>
-
-      <div class="viewer-container">
-        <div class="viewer-toolbar">
-          <button onclick="rotateImage(-90)">&larr; Rotate 90&deg;</button>
-          <button onclick="rotateImage(90)">Rotate 90&deg; &rarr;</button>
-          <button onclick="zoomImage(1.2)">Zoom +</button>
-          <button onclick="zoomImage(0.8)">Zoom &minus;</button>
-          <button onclick="resetImageTransform()">Reset View</button>
-        </div>
-        <div class="canvas-wrapper"><canvas id="imageCanvas"></canvas></div>
-      </div>
-
       <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
         <div>
           <label>Layout Type</label>
           <select id="pageLayoutType" onchange="onLayoutChanged()">
-            <option value="sheet1">Layout 1 (Sheet 1: Acetylsalicylic -&gt; Hydrochlorothiazide)</option>
-            <option value="sheet2">Layout 2 (Sheet 2: Ibuprofen -&gt; Zinc + Custom)</option>
+            <option value="sheet1">Sheet 1 (Acetylsalicylic &rarr; Hydrochlorothiazide)</option>
+            <option value="sheet2">Sheet 2 (Ibuprofen &rarr; Zinc + Custom)</option>
           </select>
         </div>
         <div>
@@ -175,13 +146,57 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
           <input type="number" id="reviewPageNumber" placeholder="e.g. 1" onchange="updatePageMetadata()">
         </div>
       </div>
+      <div class="row-boundary-rule" style="margin:4px 0 0;"><strong>RULE:</strong> count <strong>every handwritten number</strong> in the medicine&rsquo;s column, down to (not including) the <em>Total Quantity Dispensed</em> row &mdash; even if written on a stock line. Then type the register&rsquo;s own total in <em>Register total</em>; the app checks the two. Ignore pen dots.</div>
+    </div>
+
+    <div class="viewer-container sticky-viewer">
+      <div class="viewer-toolbar">
+        <button onclick="rotateImage(-90)">&larr; 90&deg;</button>
+        <button onclick="rotateImage(90)">90&deg; &rarr;</button>
+        <button onclick="zoomImage(1.3)">Zoom +</button>
+        <button onclick="zoomImage(0.77)">Zoom &minus;</button>
+        <button onclick="resetImageTransform()">Fit</button>
+      </div>
+      <div class="canvas-wrapper"><canvas id="imageCanvas"></canvas></div>
     </div>
 
     <div class="card">
       <div class="card-title">
-        <span>Medicine Consumption (Rows 1–38)</span>
-        <span class="badge" id="entryProgressBadge">0 Saved</span>
+        <span>Entry</span>
+        <span class="badge" id="entryProgressBadge">0 entered</span>
       </div>
+      <div style="display:flex; gap:6px;">
+        <select id="entryMode" onchange="onEntryModeChanged()" style="margin:0;">
+          <option value="quick">Quick (one at a time)</option>
+          <option value="list">Full list</option>
+        </select>
+        <button class="btn btn-success" onclick="markPageComplete()" style="white-space:nowrap;">Mark Complete</button>
+      </div>
+      <button class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addExtraMedicine()">+ Add handwritten extra medicine</button>
+      <div id="extractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
+    </div>
+
+    <div id="quickCard" class="card" style="border:2px solid var(--primary);">
+      <div class="card-title"><span id="quickCounter">-</span><span id="quickStatus" style="font-size:0.75rem;"></span></div>
+      <div id="quickMedName" style="font-size:1.05rem; font-weight:700; margin-bottom:8px;">Open a page to begin.</div>
+      <div style="display:flex; gap:6px; align-items:center;">
+        <input type="text" inputmode="tel" id="quickInput" class="quick-input" placeholder="e.g. 15+30+5" oninput="updateQuickSum()" onkeydown="quickKey(event)">
+        <button class="btn btn-secondary" style="font-size:1.3rem; padding:8px 16px;" onclick="quickInsertPlus()">+</button>
+      </div>
+      <div id="quickSum" style="font-size:0.85rem; font-weight:600; min-height:1.3em; margin:6px 0 2px;"></div>
+      <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
+        <label style="white-space:nowrap; text-transform:none; font-size:0.78rem;">Register total (D):</label>
+        <input type="text" inputmode="numeric" id="quickReg" class="quick-input" style="font-size:1.2rem; width:110px;" placeholder="optional" oninput="updateQuickSum()" onkeydown="quickKey(event)">
+      </div>
+      <div id="quickCheck" style="font-size:0.85rem; min-height:1.3em; margin-bottom:6px;"></div>
+      <div style="display:flex; gap:6px;">
+        <button class="btn btn-outline" style="flex:1;" onclick="quickNext(-1)">&larr; Prev</button>
+        <button class="btn btn-primary" style="flex:2;" onclick="quickNext(1)">Save &amp; Next &rarr;</button>
+      </div>
+      <p style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">Leave both boxes blank and tap Next to skip. Type 0 if nothing was issued.</p>
+    </div>
+
+    <div id="listCard" class="card" style="display:none;">
       <div id="medEntryList" style="max-height: 480px; overflow-y: auto;"></div>
     </div>
   </section>
@@ -223,13 +238,14 @@ table.report-table th { background: #e9ecef; position: sticky; top: 0; }
               <th style="width: 35px;">#</th>
               <th>Approved Medicine Name &amp; Strength</th>
               <th>Sheet</th>
-              <th style="text-align:right;">Calculated Total</th>
-              <th>Status</th>
-              <th>Contributing Pages</th>
+              <th style="text-align:right;">Counted Total</th>
+              <th style="text-align:right;">Register Total</th>
+              <th>Check</th>
+              <th>Pages</th>
             </tr>
           </thead>
           <tbody id="dailyReportTbody">
-            <tr><td colspan="6" style="text-align:center;">Select a date to display consumption.</td></tr>
+            <tr><td colspan="7" style="text-align:center;">Select a date to display consumption.</td></tr>
           </tbody>
         </table>
       </div>
@@ -461,7 +477,6 @@ window.addEventListener("DOMContentLoaded", async () => {
   const sb = document.getElementById("storageStatusBadge");
   sb.innerText = db ? "Ready ✓" : "Ready (no DB)"; sb.style.background = db ? "#28a745" : "#ffc107";
   document.getElementById("selectedDateInput").value = activeDate;
-  loadApiKey();
   await ensureActiveRun();
   await refreshDatePagesList();
 });
@@ -476,16 +491,6 @@ function switchTab(screenId) {
   if (screenId === "screen-report") generateDailyReport();
   if (screenId === "screen-master") renderMedicineMaster();
   if (screenId === "screen-review" && activePage) loadPageForReview();
-}
-
-function saveApiKey() {
-  try { localStorage.setItem("gemini_api_key", document.getElementById("geminiApiKeyInput").value.trim()); } catch (e) {}
-}
-
-function loadApiKey() {
-  let k = "";
-  try { k = localStorage.getItem("gemini_api_key") || ""; } catch (e) {}
-  document.getElementById("geminiApiKeyInput").value = k;
 }
 
 async function ensureActiveRun() {
@@ -645,7 +650,7 @@ async function refreshDatePagesList() {
     html += `
       <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.85rem;">
         <div><strong>Page ${p.pageNumber || idx + 1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending'}</span></div>
-        <button class="btn btn-primary btn-sm" onclick="selectPageForReview('${p.id}')">Open &amp; Extract</button>
+        <button class="btn btn-primary btn-sm" onclick="selectPageForReview('${p.id}')">Open &amp; Enter</button>
       </div>`;
   });
   html += `</div>`;
@@ -679,6 +684,7 @@ async function loadPageForReview() {
     drawCanvas();
   }
   await renderEntryGrid();
+  await loadQuick();
 }
 
 function rotateImage(deg) {
@@ -692,7 +698,7 @@ function rotateImage(deg) {
 }
 
 function zoomImage(factor) {
-  currentZoom = Math.min(4.0, Math.max(0.3, currentZoom * factor));
+  currentZoom = Math.min(6.0, Math.max(1.0, currentZoom * factor));
   drawCanvas();
 }
 
@@ -706,202 +712,242 @@ function drawCanvas() {
 
   if (!currentImgElement) {
     canvas.width = 300; canvas.height = 120;
+    canvas.style.width = "300px"; canvas.style.height = "auto";
     ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     ctx.fillStyle = "#ffffff"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("Photo purged to save storage.", canvas.width / 2, 55);
-    ctx.fillText("Extracted numbers remain saved.", canvas.width / 2, 75);
+    ctx.fillText("No photo (purged or not selected).", canvas.width / 2, 55);
+    ctx.fillText("Saved numbers remain.", canvas.width / 2, 75);
     return;
   }
 
   const is90or270 = (currentRotation === 90 || currentRotation === 270);
   const w = is90or270 ? currentImgElement.height : currentImgElement.width;
   const h = is90or270 ? currentImgElement.width : currentImgElement.height;
+  canvas.width = w; canvas.height = h;
 
-  canvas.width = w * currentZoom;
-  canvas.height = h * currentZoom;
+  // zoom 1 = fit to width; larger zoom scrolls inside the viewer
+  const base = Math.max(200, canvas.parentElement.clientWidth - 12);
+  canvas.style.width = (base * currentZoom) + "px";
+  canvas.style.height = "auto";
 
   ctx.save();
-  ctx.scale(currentZoom, currentZoom);
   ctx.translate(w / 2, h / 2);
   ctx.rotate((currentRotation * Math.PI) / 180);
   ctx.drawImage(currentImgElement, -currentImgElement.width / 2, -currentImgElement.height / 2);
   ctx.restore();
 }
 
-// Auto-discover an available model for the user's API key
-async function findActiveModel(apiKey) {
-  try {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models?key=${apiKey}`);
-    const data = await res.json();
-    const models = (data.models || [])
-      .filter(m => (m.supportedGenerationMethods || []).includes("generateContent"))
-      .map(m => m.name.replace("models/", ""));
-    const flash = models.filter(m => m.toLowerCase().includes("flash"));
-    if (flash.length) return flash[0];
-    if (models.length) return models[0];
-  } catch (e) {}
-  return "gemini-1.5-flash-latest";
+function parseExpr(raw) {
+  const nums = String(raw).split(/[^0-9]+/).filter(Boolean).map(Number);
+  return { nums, total: nums.reduce((a, b) => a + b, 0) };
 }
 
-// 1-click extraction; the totals are summed in JavaScript, not by the AI
-async function runWebAutoExtraction() {
-  if (!activePage || !activePage.imageData) {
-    return alert("Please select a page with an uploaded photo first.");
-  }
-  const apiKey = document.getElementById("geminiApiKeyInput").value.trim();
-  if (!apiKey) return alert("Please paste your Gemini API key in the top box.");
-
-  const msg = document.getElementById("extractMsg");
-  const btn = document.getElementById("btnAutoExtract");
-  btn.disabled = true;
-  msg.innerText = "Discovering active Gemini model...";
-
-  try {
-    const model = await findActiveModel(apiKey);
-    msg.innerText = `Extracting numbers using ${model}...`;
-
-    const base64Data = activePage.imageData.split(",")[1];
-
-    // FIX: JavaScript needs an explicit join (adjacent strings are a syntax error)
-    const prompt = [
-      "You are an expert hospital ledger extraction system.",
-      "Step 1: Identify if this page is Sheet 1 (contains patient names and starts with Acetylsalicylic acid) or Sheet 2 (starts with Ibuprofen, ends with Zinc and handwritten columns).",
-      "Step 2: Read every handwritten consumption number in each medicine column strictly between numbered rows 1 and 38.",
-      "CRITICAL ROW ANCHOR RULE:",
-      "- Look at the printed 'SL NO' column running down the LEFT margin.",
-      "- Row 1 aligns strictly with SL #1. Row 38 aligns strictly with SL #38.",
-      "- Extract numbers ONLY from cells horizontally aligned with SL #1 through SL #38.",
-      "- STRICTLY IGNORE any numbers or text below SL #38 (e.g. daily totals, remarks, signatures).",
-      "- STRICTLY IGNORE patient names, registration numbers, serial numbers, and stock columns (A, B, C).",
-      "- Return a valid raw JSON object with keys:",
-      "  \"layout\": \"sheet1\" or \"sheet2\",",
-      "  \"readings\": { \"Medicine Exact Name\": [list of numbers found in rows 1 to 38] }",
-      "Example: {\"layout\": \"sheet2\", \"readings\": {\"Metformin 500 mg Tablet\": [15, 30]}}",
-      "Do NOT calculate the sum. Output only valid JSON without markdown formatting."
-    ].join("\n");
-
-    const body = JSON.stringify({
-      contents: [{ parts: [{ text: prompt }, { inline_data: { mime_type: "image/jpeg", data: base64Data } }] }],
-      generationConfig: { temperature: 0.0 }
-    });
-
-    let response = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent?key=${apiKey}`, {
-      method: "POST", headers: { "Content-Type": "application/json" }, body
-    });
-    if (!response.ok) {
-      response = await fetch(`https://generativelanguage.googleapis.com/v1/models/${model}:generateContent?key=${apiKey}`, {
-        method: "POST", headers: { "Content-Type": "application/json" }, body
-      });
-    }
-
-    const data = await response.json();
-    if (data.error) throw new Error(data.error.message);
-
-    let rawReply = data.candidates[0].content.parts[0].text.trim();
-    if (rawReply.startsWith("```json")) rawReply = rawReply.substring(7);
-    if (rawReply.startsWith("```")) rawReply = rawReply.substring(3);
-    if (rawReply.endsWith("```")) rawReply = rawReply.substring(0, rawReply.length - 3);
-
-    const parsed = JSON.parse(rawReply.trim());
-    const layout = (parsed.layout || "sheet1").toLowerCase();
-    const readings = parsed.readings || {};
-
-    activePage.layout = layout;
-    document.getElementById("pageLayoutType").value = layout;
-
-    const allMeds = await getAllFromStore("medicines");
-    const currentMeds = (allMeds.length ? allMeds : DEFAULT_IRC_MEDICINES).filter(m => m.sheet === layout);
-
-    for (const m of currentMeds) {
-      const rawList = readings[m.name] || [];
-      const cleanNums = rawList.map(n => parseInt(n, 10)).filter(n => !isNaN(n) && n >= 0 && n <= 5000);
-      const total = cleanNums.reduce((a, b) => a + b, 0);
-
-      const entry = {
-        key: `${activePage.id}_med_${m.id}`,
-        pageId: activePage.id,
-        calcId: activePage.calcId,
-        date: activePage.date || activeDate,
-        medId: m.id,
-        quantity: total,
-        verified: true,
-        rowsRange: "1-38",
-        updated: Date.now()
-      };
-      await putRecord("entries", entry);
-      upsertMemory(window.MEMORY_ENTRIES, "key", entry);
-    }
-
-    activePage.verified = true;
-
-    if (document.getElementById("autoPurgeCheckbox").checked) {
-      activePage.imageData = null;
-      currentImgElement = null;
-      drawCanvas();
-    }
-
-    await putRecord("pages", activePage);
-    upsertMemory(window.MEMORY_PAGES, "id", activePage);
-    msg.innerText = "Extraction complete! All numbers saved. Please check them below.";
-    await renderEntryGrid();
-    await refreshDatePagesList();
-  } catch (err) {
-    msg.innerText = "Extraction failed: " + err.message;
-  } finally {
-    btn.disabled = false;
-  }
+async function getLayoutMeds() {
+  const layout = (activePage && activePage.layout) || "sheet1";
+  let all = await getAllFromStore("medicines");
+  if (!all.length) all = DEFAULT_IRC_MEDICINES;
+  return all.filter(m => m.sheet === layout);
 }
 
-async function renderEntryGrid() {
-  if (!activePage) return;
-  const layout = activePage.layout || "sheet1";
-  let allMeds = await getAllFromStore("medicines");
-  if (!allMeds.length) allMeds = DEFAULT_IRC_MEDICINES;
-  const filteredMeds = allMeds.filter(m => m.sheet === layout);
-
-  let allEntries = await getAllFromStore("entries");
-  if (!allEntries.length && window.MEMORY_ENTRIES.length) allEntries = window.MEMORY_ENTRIES;
-
-  const entryMap = {};
-  allEntries.filter(e => e.pageId === activePage.id).forEach(e => { entryMap[e.medId] = e; });
-
-  let html = "";
-  let verifiedCount = 0;
-
-  filteredMeds.forEach(m => {
-    const entry = entryMap[m.id];
-    const val = (entry && entry.quantity !== null && entry.quantity !== undefined) ? entry.quantity : "";
-    if (entry && entry.verified) verifiedCount++;
-    html += `
-      <div class="med-row">
-        <div class="med-header">
-          <div class="med-name">${m.col}. ${m.name}</div>
-          <input type="number" min="0" step="1" class="qty-input" id="qty_input_${m.id}"
-            value="${val}" placeholder="0" onchange="onManualQtyChanged(${m.id})">
-        </div>
-      </div>`;
-  });
-
-  document.getElementById("medEntryList").innerHTML = html;
-  document.getElementById("entryProgressBadge").innerText = `${verifiedCount} Saved`;
+async function pageEntryMap() {
+  let all = await getAllFromStore("entries");
+  if (!all.length && window.MEMORY_ENTRIES.length) all = window.MEMORY_ENTRIES;
+  const map = {};
+  if (activePage) all.filter(e => e.pageId === activePage.id).forEach(e => { map[e.medId] = e; });
+  return map;
 }
 
-async function onManualQtyChanged(medId) {
-  if (!activePage) return;
-  const qty = parseInt(document.getElementById(`qty_input_${medId}`).value, 10) || 0;
+function checkHtml(qty, reg) {
+  if (reg === null || reg === undefined || String(reg).trim() === "") return "";
+  const r = parseInt(reg, 10);
+  if (isNaN(r)) return "";
+  return r === qty
+    ? `<span style="color:#28a745; font-weight:700;">&#10003; matches register</span>`
+    : `<span class="warn">&#9888; register says ${r} (differs by ${Math.abs(r - qty)})</span>`;
+}
+
+async function saveEntryFor(medId, raw, reg) {
+  const { total } = parseExpr(raw);
+  const r = String(reg === undefined ? "" : reg).trim();
   const entry = {
     key: `${activePage.id}_med_${medId}`,
     pageId: activePage.id,
     calcId: activePage.calcId,
     date: activePage.date || activeDate,
     medId: medId,
-    quantity: qty,
+    quantity: total,
+    expr: raw.trim(),
+    regTotal: r === "" ? null : (parseInt(r, 10) || 0),
     verified: true,
-    rowsRange: "1-38",
+    rowsRange: "grid",
     updated: Date.now()
   };
   await putRecord("entries", entry);
-  upsertMemory(window.MEMORY_ENTRIES, "key", entry);  // FIX: no duplicates
+  upsertMemory(window.MEMORY_ENTRIES, "key", entry);
+}
+
+async function updateProgress() {
+  const meds = await getLayoutMeds();
+  const map = await pageEntryMap();
+  const n = meds.filter(m => map[m.id]).length;
+  document.getElementById("entryProgressBadge").innerText = `${n} / ${meds.length} entered`;
+  return { meds, map, missing: meds.length - n };
+}
+
+async function markPageComplete() {
+  if (!activePage) return alert("Open a page first.");
+  const { meds, map, missing } = await updateProgress();
+  let bad = 0;
+  meds.forEach(m => { const e = map[m.id]; if (e && e.regTotal !== null && e.regTotal !== undefined && e.regTotal !== e.quantity) bad++; });
+  const warn = [];
+  if (missing) warn.push(`${missing} medicine(s) have no entry (blank)`);
+  if (bad) warn.push(`${bad} medicine(s) differ from the register total`);
+  if (warn.length && !confirm(warn.join(" and ") + ". Mark this page complete anyway?")) return;
+  activePage.verified = true;
+  await putRecord("pages", activePage);
+  upsertMemory(window.MEMORY_PAGES, "id", activePage);
+  document.getElementById("extractMsg").innerText = warn.length ? `Page marked complete (${warn.join("; ")}).` : "Page marked complete. All checks passed.";
+  await refreshDatePagesList();
+}
+
+// ---------- Quick entry (one medicine at a time) ----------
+let quickMeds = [];
+let quickIndex = 0;
+
+async function loadQuick() {
+  if (!activePage) return;
+  quickMeds = await getLayoutMeds();
+  const map = await pageEntryMap();
+  const first = quickMeds.findIndex(m => !map[m.id]);
+  quickIndex = first < 0 ? 0 : first;
+  await showQuick();
+}
+
+async function showQuick() {
+  if (!quickMeds.length) return;
+  const m = quickMeds[quickIndex];
+  const map = await pageEntryMap();
+  const e = map[m.id];
+  const input = document.getElementById("quickInput");
+  document.getElementById("quickCounter").innerText = `${quickIndex + 1} / ${quickMeds.length}`;
+  document.getElementById("quickMedName").innerText = `${m.col}. ${m.name}`;
+  input.value = e ? ((e.expr !== undefined && e.expr !== "") ? e.expr : String(e.quantity)) : "";
+  document.getElementById("quickReg").value = (e && e.regTotal !== null && e.regTotal !== undefined) ? e.regTotal : "";
+  const st = document.getElementById("quickStatus");
+  st.innerText = e ? "Saved" : "Not entered";
+  st.style.color = e ? "var(--success)" : "var(--text-muted)";
+  updateQuickSum();
+  await updateProgress();
+  if (document.getElementById("entryMode").value === "quick") input.focus();
+}
+
+function updateQuickSum() {
+  const raw = document.getElementById("quickInput").value;
+  const reg = document.getElementById("quickReg").value.trim();
+  const el = document.getElementById("quickSum");
+  const { nums, total } = parseExpr(raw);
+  if (!raw.trim()) { el.innerHTML = ""; }
+  else {
+    const big = nums.some(n => n >= 1000);
+    el.innerHTML = `${nums.length} entr${nums.length === 1 ? "y" : "ies"} &rarr; total <strong>${total}</strong>` +
+      (big ? ` <span class="warn">&#9888; large number, check</span>` : "");
+  }
+  document.getElementById("quickCheck").innerHTML = (raw.trim() || reg) ? checkHtml(total, reg) : "";
+}
+
+function quickInsertPlus() {
+  const input = document.getElementById("quickInput");
+  input.value = input.value.replace(/\+?\s*$/, "") + "+";
+  input.focus();
+  updateQuickSum();
+}
+
+function quickKey(e) {
+  if (e.key === "Enter") { e.preventDefault(); quickNext(1); }
+}
+
+async function quickNext(delta) {
+  if (!activePage || !quickMeds.length) return;
+  const raw = document.getElementById("quickInput").value;
+  const reg = document.getElementById("quickReg").value;
+  if (raw.trim() !== "" || reg.trim() !== "") await saveEntryFor(quickMeds[quickIndex].id, raw, reg);
+  const next = quickIndex + delta;
+  if (next >= quickMeds.length) {
+    await showQuick();
+    document.getElementById("quickStatus").innerText = "Last medicine - tap Mark Complete";
+    return;
+  }
+  quickIndex = Math.max(0, next);
+  await showQuick();
+}
+
+// ---------- Full list ----------
+function rowInfoHtml(e) {
+  if (!e) return "";
+  const isSum = /\D/.test(String(e.expr || ""));
+  return (isSum ? `= ${e.quantity} &nbsp;` : "") + checkHtml(e.quantity, e.regTotal);
+}
+
+async function renderEntryGrid() {
+  if (!activePage) return;
+  const meds = await getLayoutMeds();
+  const map = await pageEntryMap();
+  let html = "";
+  meds.forEach(m => {
+    const e = map[m.id];
+    const val = e ? ((e.expr !== undefined && e.expr !== "") ? e.expr : e.quantity) : "";
+    const reg = (e && e.regTotal !== null && e.regTotal !== undefined) ? e.regTotal : "";
+    html += `
+      <div class="med-row">
+        <div class="med-header">
+          <div class="med-name">${m.col}. ${m.name}${m.custom ? " <em>(extra)</em>" : ""}</div>
+          <input type="text" inputmode="tel" class="qty-input" id="qty_input_${m.id}" value="${val}" placeholder="count" onchange="onManualQtyChanged(${m.id})">
+          <input type="text" inputmode="numeric" class="qty-input" id="reg_input_${m.id}" value="${reg}" placeholder="reg" style="width:62px; border-color:#999;" onchange="onManualQtyChanged(${m.id})">
+        </div>
+        <div id="sum_${m.id}" style="font-size:0.75rem; text-align:right; min-height:1em; color:var(--text-muted);">${rowInfoHtml(e)}</div>
+      </div>`;
+  });
+  document.getElementById("medEntryList").innerHTML = html;
+  await updateProgress();
+}
+
+async function onManualQtyChanged(medId) {
+  if (!activePage) return;
+  const raw = document.getElementById(`qty_input_${medId}`).value;
+  const reg = document.getElementById(`reg_input_${medId}`).value;
+  if (raw.trim() === "" && reg.trim() === "") return;
+  await saveEntryFor(medId, raw, reg);
+  const map = await pageEntryMap();
+  const sp = document.getElementById(`sum_${medId}`);
+  if (sp) sp.innerHTML = rowInfoHtml(map[medId]);
+  await updateProgress();
+}
+
+async function addExtraMedicine() {
+  if (!activePage) return alert("Open a page first.");
+  const name = prompt("Handwritten extra medicine name (e.g. Ivermectin 6mg):");
+  if (!name || !name.trim()) return;
+  let meds = await getAllFromStore("medicines");
+  if (!meds.length) meds = DEFAULT_IRC_MEDICINES;
+  const layout = activePage.layout || "sheet1";
+  let m = meds.find(x => x.sheet === layout && x.name.toLowerCase() === name.trim().toLowerCase());
+  if (!m) {
+    const nextId = Math.max(200, ...meds.map(x => x.id)) + 1;
+    m = { id: nextId, name: name.trim(), sheet: layout, col: meds.filter(x => x.sheet === layout).length + 1, custom: true };
+    await putRecord("medicines", m);
+    if (!DEFAULT_IRC_MEDICINES.find(x => x.id === m.id)) DEFAULT_IRC_MEDICINES.push(m);
+  }
+  await renderEntryGrid();
+  await loadQuick();
+  const i = quickMeds.findIndex(x => x.id === m.id);
+  if (i >= 0) { quickIndex = i; await showQuick(); }
+}
+
+async function onEntryModeChanged() {
+  const quick = document.getElementById("entryMode").value === "quick";
+  document.getElementById("quickCard").style.display = quick ? "block" : "none";
+  document.getElementById("listCard").style.display = quick ? "none" : "block";
+  if (quick) await loadQuick(); else await renderEntryGrid();
 }
 
 async function onLayoutChanged() {
@@ -910,6 +956,7 @@ async function onLayoutChanged() {
   await putRecord("pages", activePage);
   upsertMemory(window.MEMORY_PAGES, "id", activePage);
   await renderEntryGrid();
+  await loadQuick();
 }
 
 async function updatePageMetadata() {
@@ -938,6 +985,27 @@ async function deleteActivePage() {
   switchTab("screen-workspace");
 }
 
+function aggregateEntries(entries, medicines) {
+  const agg = {};
+  medicines.forEach(m => { agg[m.id] = { total: 0, reg: 0, regN: 0, n: 0, pages: new Set() }; });
+  entries.forEach(e => {
+    const a = agg[e.medId];
+    if (!a) return;
+    a.total += parseInt(e.quantity, 10) || 0;
+    a.n++;
+    a.pages.add(e.pageId);
+    if (e.regTotal !== null && e.regTotal !== undefined) { a.reg += e.regTotal; a.regN++; }
+  });
+  return agg;
+}
+
+function statusOf(a) {
+  if (!a.n) return { text: "No data", cls: "pill-partial", bad: false };
+  if (a.regN < a.n) return { text: "No register total", cls: "pill-partial", bad: false };
+  if (a.reg === a.total) return { text: "&#10003; Match", cls: "pill-verified", bad: false };
+  return { text: `&#9888; Differs by ${Math.abs(a.reg - a.total)}`, cls: "pill-bad", bad: true };
+}
+
 async function generateDailyReport() {
   const scope = document.getElementById("reportScopeSelector").value;
   document.getElementById("repDateTag").innerText = activeDate;
@@ -962,33 +1030,30 @@ async function generateDailyReport() {
 
   document.getElementById("repPagesCount").innerText = `${pages.length} pages`;
   const allVerified = pages.length > 0 && pages.every(p => p.verified);
-  const badge = document.getElementById("repCompletenessBadge");
-  badge.innerText = allVerified ? "VERIFIED (Rows 1–38)" : "PARTIAL";
-  badge.className = `status-pill ${allVerified ? 'pill-verified' : 'pill-partial'}`;
-
-  const totalsByMed = {};
-  medicines.forEach(m => { totalsByMed[m.id] = { total: 0, pages: new Set() }; });
-  entries.forEach(e => {
-    if (totalsByMed[e.medId]) {
-      totalsByMed[e.medId].total += parseInt(e.quantity, 10) || 0;
-      totalsByMed[e.medId].pages.add(e.pageId);
-    }
-  });
+  const agg = aggregateEntries(entries, medicines);
+  let mismatches = 0;
 
   let tbodyHtml = "";
   medicines.forEach((m, idx) => {
-    const agg = totalsByMed[m.id];
+    const a = agg[m.id];
+    const st = statusOf(a);
+    if (st.bad) mismatches++;
     tbodyHtml += `
       <tr>
         <td>${idx + 1}</td>
-        <td><strong>${m.name}</strong></td>
-        <td>${m.sheet === 'sheet1' ? 'Sheet 1 (1-40)' : 'Sheet 2 (41-88)'}</td>
-        <td class="num-cell">${agg.total}</td>
-        <td><span class="status-pill ${agg.pages.size ? 'pill-verified' : 'pill-partial'}">${agg.pages.size ? 'Verified' : 'No data'}</span></td>
-        <td style="font-size:0.75rem; color:var(--text-muted);">${agg.pages.size} pages</td>
+        <td><strong>${m.name}</strong>${m.custom ? " <em>(extra)</em>" : ""}</td>
+        <td class="num-cell">${a.total}</td>
+        <td class="num-cell">${a.regN ? a.reg : "-"}</td>
+        <td><span class="status-pill ${st.cls}">${st.text}</span></td>
+        <td style="font-size:0.75rem; color:var(--text-muted);">${a.pages.size}</td>
       </tr>`;
   });
   document.getElementById("dailyReportTbody").innerHTML = tbodyHtml;
+
+  const badge = document.getElementById("repCompletenessBadge");
+  if (mismatches) { badge.innerText = `${mismatches} MISMATCH(ES) - CHECK`; badge.className = "status-pill pill-bad"; }
+  else if (allVerified) { badge.innerText = "VERIFIED"; badge.className = "status-pill pill-verified"; }
+  else { badge.innerText = "PARTIAL"; badge.className = "status-pill pill-partial"; }
 }
 
 async function exportReportCSV() {
@@ -997,15 +1062,13 @@ async function exportReportCSV() {
   if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
   let allEntries = await getAllFromStore("entries");
   if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
-
   const entries = (scope === "activeRun") ? allEntries.filter(e => e.calcId === activeCalcId) : allEntries.filter(e => e.date === activeDate);
-  const totals = {};
-  medicines.forEach(m => { totals[m.id] = 0; });
-  entries.forEach(e => { if (totals[e.medId] !== undefined) totals[e.medId] += parseInt(e.quantity, 10) || 0; });
-
-  let csv = "Index,Medicine Name,Date,Total,Boundary\n";
+  const agg = aggregateEntries(entries, medicines);
+  let csv = "Index,Medicine Name,Date,Counted Total,Register Total,Check\n";
   medicines.forEach((m, i) => {
-    csv += `${i + 1},"${m.name.replace(/"/g, '""')}",${activeDate},${totals[m.id]},Rows 1-38\n`;
+    const a = agg[m.id], st = statusOf(a);
+    const chk = st.text.replace(/&#10003;/g, "OK").replace(/&#9888;/g, "!");
+    csv += `${i + 1},"${m.name.replace(/"/g, '""')}",${activeDate},${a.total},${a.regN ? a.reg : ""},${chk}\n`;
   });
   downloadBlob(csv, `consumption_${activeDate}.csv`, "text/csv;charset=utf-8;");
 }
