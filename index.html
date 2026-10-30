@@ -127,7 +127,7 @@ td.tot{background:#eef7ee;font-weight:700}
     </select>
     <label>Gemini API key (free at aistudio.google.com/apikey)</label>
     <input type="password" id="gkey" placeholder="AIza...">
-    <label>Gemini model</label>
+    <label>Gemini model (exact ID, e.g. gemini-2.5-flash)</label>
     <input id="gmodel">
     <label>Anthropic API key</label>
     <input type="password" id="ckey" placeholder="sk-ant-...">
@@ -169,6 +169,7 @@ td.tot{background:#eef7ee;font-weight:700}
 <script>
 "use strict";
 const MAXP = 30;
+const IMG_MAX = 2200;
 const $ = id => document.getElementById(id);
 const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 const sleep = ms => new Promise(r => setTimeout(r, ms));
@@ -272,7 +273,7 @@ async function compress(file) {
       c.getContext("2d").drawImage(i, 0, 0, c.width, c.height);
       return c.toDataURL("image/jpeg", max > 500 ? 0.85 : 0.8);
     };
-    return { img: mk(1600), thumb: mk(320) };
+    return { img: mk(IMG_MAX), thumb: mk(320) };
   } finally { URL.revokeObjectURL(u); }
 }
 async function rotateData(data, deg) {
@@ -400,10 +401,8 @@ function parseJSON(text) {
   if (!m) throw new Error("AI reply had no JSON");
   return JSON.parse(m[0]);
 }
-const prepCache = {};
+/* no cache: image strips are cheap to rebuild and a cache keyed on JPEG header bytes can return the wrong page */
 async function prepImage(src, x0, x1) {
-  const key = src.length + ":" + src.slice(64, 96) + ":" + x0 + ":" + x1;
-  if (prepCache[key]) return prepCache[key];
   const i = await loadImg(src);
   const sx = Math.round(i.width * x0), sw = Math.round(i.width * (x1 - x0));
   const c = document.createElement("canvas");
@@ -411,29 +410,38 @@ async function prepImage(src, x0, x1) {
   const x = c.getContext("2d");
   x.filter = "grayscale(1) contrast(1.35) brightness(1.05)";
   x.drawImage(i, sx, 0, sw, i.height, 0, 0, sw, i.height);
-  const out = c.toDataURL("image/jpeg", 0.9).split(",")[1];
-  if (Object.keys(prepCache).length > 40) for (const k in prepCache) delete prepCache[k];
-  prepCache[key] = out;
-  return out;
+  return c.toDataURL("image/jpeg", 0.9).split(",")[1];
 }
 function httpErr(res, data, codes) {
-  const e = new Error((data && data.error && (data.error.message || data.error)) || "HTTP " + res.status);
-  e.retry = codes.includes(res.status); return e;
+  const er = data && data.error;
+  const e = new Error((er && (er.message || (typeof er === "string" ? er : ""))) || "HTTP " + res.status);
+  e.retry = codes.includes(res.status);
+  e.wait = 0;
+  const txt = JSON.stringify(er || {});
+  if (res.status === 429) {
+    const m = txt.match(/"retryDelay":"(\d+(?:\.\d+)?)s"/) || txt.match(/retry in (\d+(?:\.\d+)?)s/i);
+    e.wait = m ? Math.ceil(parseFloat(m[1]) * 1000) + 1000 : 0;
+    if (/PerDay/i.test(txt)) { e.retry = false; e.message = "Daily quota used up for this key/model. Wait until tomorrow or use another provider. (" + e.message + ")"; }
+  }
+  return e;
 }
 async function callGemini(b64, prompt, c) {
   await throttle("gemini", 2000);
+  const gen = { responseMimeType: "application/json", mediaResolution: "MEDIA_RESOLUTION_HIGH" };
+  // Gemini 2.x works best at temperature 0; Gemini 3 models should keep their default.
+  if (!/gemini-3/i.test(c.gmodel)) gen.temperature = 0;
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.gmodel)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": c.gkey },
     body: JSON.stringify({
       contents: [{ parts: [{ inline_data: { mime_type: "image/jpeg", data: b64 } }, { text: prompt }] }],
-      generationConfig: { temperature: 0, responseMimeType: "application/json" }
+      generationConfig: gen
     })
   });
   const data = await res.json().catch(() => ({}));
   if (!res.ok) throw httpErr(res, data, [429, 500, 502, 503]);
   const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
-  return parts.map(x => x.text || "").join("");
+  return parts.filter(x => !x.thought).map(x => x.text || "").join("");
 }
 async function callClaude(b64, prompt, c) {
   await throttle("claude", 500);
@@ -444,7 +452,7 @@ async function callClaude(b64, prompt, c) {
       "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
     },
     body: JSON.stringify({
-      model: c.cmodel, max_tokens: 6000, temperature: 0,
+      model: c.cmodel, max_tokens: 6000,
       messages: [{ role: "user", content: [
         { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
         { type: "text", text: prompt }] }]
@@ -478,8 +486,8 @@ async function callReader(reader, b64, prompt, c) {
       return parseJSON(text);
     } catch (e) {
       if (e instanceof TypeError || e instanceof SyntaxError) e.retry = true;
-      if (!e.retry || a >= 4) throw e;
-      await sleep(5000 * a);
+      if (!e.retry || a >= 5) throw e;
+      await sleep(Math.min(90000, e.wait || 15000 * a));
     }
   }
 }
@@ -528,7 +536,6 @@ function finalize(m) {
   }
   return { layout, rows, bad, filled };
 }
-const better = (a, b) => a.bad < b.bad || (a.bad === b.bad && a.filled > b.filled);
 async function readerRead(reader, p, c, strips) {
   const spans = strips ? [[0, 0.4, "left"], [0.3, 0.7, "middle"], [0.6, 1, "right"]] : [[0, 1, ""]];
   const parsed = [];
@@ -541,7 +548,7 @@ async function readerRead(reader, p, c, strips) {
 }
 const sameRow = (x, y) => x.reg === y.reg && [...x.nums].sort((a, b) => a - b).join("+") === [...y.nums].sort((a, b) => a - b).join("+");
 async function readPage(p, c) {
-  const prim = finalize(await readerRead("main", p, c, c.precision));
+  let prim = finalize(await readerRead("main", p, c, c.precision));
   p.note = "";
   if (c.useSecond && c.bkey && c.burl && c.bmodel) {
     try {
@@ -668,8 +675,7 @@ async function buildTotals() {
   const add = n => { const k = n.toLowerCase(); if (!seen.has(k)) { seen.add(k); order.push(n); } };
   names("s1").forEach(add); names("s2").forEach(add);
   pages.forEach(p => Object.keys(p.rows || {}).forEach(add));
-  const used = order;
-  const drugs = used.map(n => {
+  const drugs = order.map(n => {
     const per = pages.map(p => {
       const key = Object.keys(p.rows || {}).find(k => k.toLowerCase() === n.toLowerCase());
       if (!key) return null;
@@ -722,7 +728,10 @@ $("btnCsv").onclick = async () => {
     d.per.forEach((x, i) => { if (x) lines.push([S.date, q(d.name), i + 1, x.counted, x.reg == null ? "" : x.reg, x.reg == null ? "" : x.reg === x.counted ? "yes" : "NO"].join(",")); });
     lines.push([S.date, q(d.name), "DAY TOTAL", d.counted, d.reg, d.counted === d.reg ? "yes" : "NO"].join(","));
   }
-  lines.push([S.date, '"ALL MEDICINES"', "PAGE TOTALS", ...pages.map((p, i) => drugs.reduce((a, d) => a + (d.per[i] ? d.per[i].counted : 0), 0)).join(",")].join(","));
+  pages.forEach((p, i) => {
+    const t = drugs.reduce((a, d) => a + (d.per[i] ? d.per[i].counted : 0), 0);
+    lines.push([S.date, '"ALL MEDICINES"', "PAGE " + (i + 1) + " TOTAL", t, "", ""].join(","));
+  });
   download(new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv" }), `ledger-${S.date}.csv`);
 };
 function download(blob, name) {
@@ -731,12 +740,13 @@ function download(blob, name) {
 }
 
 /* ---------- settings / backup ---------- */
+const CFG_KEYS = ["provider", "gkey", "gmodel", "ckey", "cmodel", "burl", "bkey", "bmodel", "s1", "s2"];
 function loadCfgUI() {
   const c = cfg();
-  ["provider", "gkey", "gmodel", "ckey", "cmodel", "burl", "bkey", "bmodel", "s1", "s2"].forEach(k => $(k).value = c[k]);
+  CFG_KEYS.forEach(k => $(k).value = c[k]);
 }
 $("saveCfg").onclick = () => {
-  const c = {}; ["provider", "gkey", "gmodel", "ckey", "cmodel", "burl", "bkey", "bmodel", "s1", "s2"].forEach(k => c[k] = $(k).value.trim());
+  const c = {}; CFG_KEYS.forEach(k => c[k] = $(k).value.trim());
   c.s1 = $("s1").value; c.s2 = $("s2").value;
   saveCfgObj(c);
   $("cfgMsg").style.color = "var(--ok)"; $("cfgMsg").textContent = "Saved.";
