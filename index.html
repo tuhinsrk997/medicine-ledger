@@ -67,15 +67,20 @@ td.tot{background:#eef7ee;font-weight:700}
     <input type="date" id="date">
     <label>Add photos (max 30 pages per date)</label>
     <input type="file" id="files" accept="image/*" multiple>
-    <div class="small">Tip: photograph each page flat, in good light, one page per photo. Pages are shrunk to 2400 px so handwriting stays readable.</div>
+    <div class="small">Tip: photograph each page flat, in good light, one page per photo.</div>
   </div>
   <div class="card">
     <div class="card-title">Auto-extract (AI)</div>
     <label><input type="checkbox" id="precision">Precision mode (reads each page in 3 strips; slower, more accurate)</label>
     <label><input type="checkbox" id="skipRead" checked>Skip pages already read or verified</label>
+    <label>Readers to use (2 readers cross-check but take longer)</label>
+    <select id="readerMode">
+      <option value="1">1 reader (fast)</option>
+      <option value="2">2 readers (safer, ~2x slower)</option>
+    </select>
     <button class="btn btn-p btn-b" id="btnAuto">Auto-extract all pages for this date</button>
     <div class="msg" id="autoMsg"></div>
-    <div class="small" style="margin-top:6px">Each page is checked automatically: the sum of the handwritten numbers must equal the Total Quantity Dispensed. If not, the page is re-read once in strips. If a second reader is set in Settings, rows where the two readers disagree are marked ? for you. Anything still wrong is flagged for you.</div>
+    <div class="small" style="margin-top:6px">Pages are read two at a time. The sum of the handwritten numbers is checked against the Total Quantity Dispensed row automatically; mismatches are marked for you in Review/Totals.</div>
   </div>
   <div class="card">
     <div class="card-title">Pages for this date</div>
@@ -107,7 +112,7 @@ td.tot{background:#eef7ee;font-weight:700}
       </span>
     </div>
     <div class="msg" id="totStatus"></div>
-    <div class="small">Each cell is the counted sum (handwritten numbers added up) for that page. Red = differs from the register total written on the page. Day columns add all pages.</div>
+    <div class="small">Each cell is the counted sum (handwritten numbers added up) for that page. Red = differs from the register total written on the page. "Page total" row = all medicines summed per image. All configured medicines are always listed, even with zero entries.</div>
   </div>
   <div class="card tw" id="totTable"></div>
 </section>
@@ -138,7 +143,7 @@ td.tot{background:#eef7ee;font-weight:700}
     <input type="password" id="bkey">
     <label>Vision model name</label>
     <input id="bmodel" placeholder="copy a vision model name from the provider's list">
-    <div class="small">Any OpenAI-compatible service with a vision model works, for example Groq (console.groq.com) or OpenRouter (base URL https://openrouter.ai/api/v1, pick a free vision model). Leave the key empty to use one reader. Model names change, so copy the current one from the provider.</div>
+    <div class="small">Any OpenAI-compatible service with a vision model works, for example Groq (console.groq.com) or OpenRouter (base URL https://openrouter.ai/api/v1, pick a free vision model). Leave the key empty to use one reader. You can also pick "1 reader (fast)" on the Upload tab per run.</div>
   </div>
   <div class="card">
     <div class="card-title">Medicine names, in column order (one per line)</div>
@@ -173,8 +178,14 @@ const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 
 let db;
 function openDB() {
   return new Promise((res, rej) => {
-    const r = indexedDB.open("ledger", 1);
-    r.onupgradeneeded = () => r.result.createObjectStore("pages", { keyPath: "id" });
+    const r = indexedDB.open("ledger", 2);
+    r.onupgradeneeded = () => {
+      const d = r.result;
+      let s;
+      if (!d.objectStoreNames.contains("pages")) s = d.createObjectStore("pages", { keyPath: "id" });
+      else s = r.transaction.objectStore("pages");
+      if (!s.indexNames.contains("byDate")) s.createIndex("byDate", "date");
+    };
     r.onsuccess = () => { db = r.result; res(); };
     r.onerror = () => rej(r.error);
   });
@@ -191,8 +202,13 @@ function tx(mode, fn) {
 const allPages = () => tx("readonly", s => s.getAll());
 const putPage = p => tx("readwrite", s => s.put(p));
 const delPage = id => tx("readwrite", s => s.delete(id));
-async function pagesOf(date) {
-  return (await allPages()).filter(p => p.date === date).sort((a, b) => a.idx - b.idx);
+function pagesOf(date) {
+  return new Promise((res, rej) => {
+    if (!db) return res([]);
+    const rq = db.transaction("pages", "readonly").objectStore("pages").index("byDate").getAll(date);
+    rq.onsuccess = () => res((rq.result || []).sort((a, b) => a.idx - b.idx));
+    rq.onerror = () => rej(rq.error);
+  });
 }
 
 const DEF = {
@@ -207,11 +223,21 @@ function cfg() {
 }
 function saveCfgObj(c) { try { localStorage.setItem("cfg", JSON.stringify(c)); } catch (e) {} }
 const names = k => (cfg()[k] || "").split("\n").map(s => s.trim()).filter(Boolean);
-const listFor = p => names(p.layout === "sheet2" ? "s2" : "s1");
+function listFor(p) {
+  const l = names(p.layout === "sheet2" ? "s2" : "s1");
+  return l.length ? l : names("s1");
+}
 
 /* ---------- helpers ---------- */
 const sumN = a => (a || []).reduce((x, y) => x + y, 0);
 const parseNums = s => (s.match(/\d+(\.\d+)?/g) || []).map(Number);
+const normName = s => String(s).toLowerCase().replace(/[^a-z0-9]+/g, " ").trim();
+function findMed(raw, list) {
+  const n = normName(raw);
+  if (!n) return null;
+  return list.find(x => normName(x) === n)
+      || list.find(x => normName(x).includes(n) || n.includes(normName(x)));
+}
 const S = { date: "", pid: null };
 function rowOf(p, name) { return (p.rows && p.rows[name]) || { nums: [], reg: null }; }
 function mism(p) {
@@ -239,11 +265,14 @@ async function compress(file) {
   const u = URL.createObjectURL(file);
   try {
     const i = await loadImg(u);
-    const k = Math.min(1, 2400 / Math.max(i.width, i.height));
-    const c = document.createElement("canvas");
-    c.width = Math.round(i.width * k); c.height = Math.round(i.height * k);
-    c.getContext("2d").drawImage(i, 0, 0, c.width, c.height);
-    return c.toDataURL("image/jpeg", 0.88);
+    const mk = max => {
+      const k = Math.min(1, max / Math.max(i.width, i.height));
+      const c = document.createElement("canvas");
+      c.width = Math.round(i.width * k); c.height = Math.round(i.height * k);
+      c.getContext("2d").drawImage(i, 0, 0, c.width, c.height);
+      return c.toDataURL("image/jpeg", max > 500 ? 0.85 : 0.8);
+    };
+    return { img: mk(1600), thumb: mk(320) };
   } finally { URL.revokeObjectURL(u); }
 }
 async function rotateData(data, deg) {
@@ -254,7 +283,7 @@ async function rotateData(data, deg) {
   const x = c.getContext("2d");
   x.translate(w / 2, h / 2); x.rotate(deg * Math.PI / 180);
   x.drawImage(i, -i.width / 2, -i.height / 2);
-  return c.toDataURL("image/jpeg", 0.88);
+  return c.toDataURL("image/jpeg", 0.85);
 }
 
 /* ---------- tabs ---------- */
@@ -280,8 +309,8 @@ async function renderUpload() {
   $("noPages").style.display = pages.length ? "none" : "block";
   $("thumbs").innerHTML = pages.map((p, i) => `
     <div class="thumb">
-      <img src="${p.img}" alt="">
-      <div><b>Page ${i + 1}</b> ${statusTag(p)}</div>
+      <img src="${p.thumb || p.img}" alt="">
+      <div><b>Page ${i + 1}</b> <span id="tg-${p.id}">${statusTag(p)}</span></div>
       <select data-lay="${p.id}">
         <option value="sheet1" ${p.layout !== "sheet2" ? "selected" : ""}>Sheet 1</option>
         <option value="sheet2" ${p.layout === "sheet2" ? "selected" : ""}>Sheet 2</option>
@@ -303,7 +332,8 @@ $("thumbs").addEventListener("click", async e => {
   const all = await allPages();
   if (b.dataset.rot) {
     const p = all.find(x => x.id === b.dataset.rot);
-    p.img = await rotateData(p.img, 90); await putPage(p); render();
+    p.img = await rotateData(p.img, 90); p.thumb = await rotateData(p.thumb || p.img, 90);
+    await putPage(p); render();
   } else if (b.dataset.del) {
     if (confirm("Delete this page and its numbers?")) { await delPage(b.dataset.del); render(); }
   } else if (b.dataset.open) { S.pid = b.dataset.open; showTab("review"); }
@@ -321,8 +351,8 @@ $("files").addEventListener("change", async e => {
   for (const f of files.slice(0, room)) {
     try {
       msg.style.color = "var(--primary)"; msg.textContent = "Adding " + f.name + "...";
-      const img = await compress(f);
-      await putPage({ id: uid(), date: S.date, idx: ++idx, layout: "sheet1", img, rows: {}, status: "new" });
+      const { img, thumb } = await compress(f);
+      await putPage({ id: uid(), date: S.date, idx: ++idx, layout: "sheet1", img, thumb, rows: {}, status: "new" });
     } catch (err) { msg.style.color = "var(--bad)"; msg.textContent = "Could not add " + f.name + ": " + err.message; }
   }
   if (msg.textContent.startsWith("Adding")) msg.textContent = "";
@@ -330,12 +360,23 @@ $("files").addEventListener("change", async e => {
 });
 
 /* ---------- AI extraction ---------- */
-function runCfg() { return Object.assign(cfg(), { precision: !!($("precision") && $("precision").checked) }); }
+function runCfg() {
+  const c = Object.assign(cfg(), { precision: !!($("precision") && $("precision").checked) });
+  c.useSecond = $("readerMode") && $("readerMode").value === "2";
+  return c;
+}
 const lastCall = {};
 async function throttle(key, ms) {
   const w = (lastCall[key] || 0) + ms - Date.now();
   if (w > 0) await sleep(w);
   lastCall[key] = Date.now();
+}
+async function pool(items, n, fn) {
+  const ret = []; let i = 0;
+  await Promise.all(Array.from({ length: Math.min(n, items.length) }, async () => {
+    while (i < items.length) { const k = i++; ret[k] = await fn(items[k], k); }
+  }));
+  return ret;
 }
 function buildPrompt(note) {
   const l1 = names("s1").map((n, i) => `${i + 1}. ${n}`).join("\n");
@@ -347,6 +388,8 @@ ${l1}
 ${l2 ? `\nSHEET2 columns, left to right:\n${l2}\n` : ""}
 For every column, read EVERY handwritten number above the "Total Quantity Dispensed" row (even numbers written on a stock line), as a list, and read the handwritten number in the "Total Quantity Dispensed" row as "reg". Ignore pen dots, strike-throughs of printed text and printed text. Do not add the numbers yourself; list them exactly as written. Skip handwritten columns that are not in the list.
 
+Before answering, verify each column: the sum of "nums" must equal "reg". If a column fails, re-read that column carefully and correct your answer. Only then return the JSON.
+
 Return ONLY JSON, no other text:
 {"sheet":"sheet1","rows":[{"name":"<exact name from the list>","nums":[15,30,5],"reg":50}]}
 Use "nums":[] for a blank column and "reg":null if the total is blank or unreadable.`;
@@ -357,7 +400,10 @@ function parseJSON(text) {
   if (!m) throw new Error("AI reply had no JSON");
   return JSON.parse(m[0]);
 }
+const prepCache = {};
 async function prepImage(src, x0, x1) {
+  const key = src.length + ":" + src.slice(64, 96) + ":" + x0 + ":" + x1;
+  if (prepCache[key]) return prepCache[key];
   const i = await loadImg(src);
   const sx = Math.round(i.width * x0), sw = Math.round(i.width * (x1 - x0));
   const c = document.createElement("canvas");
@@ -365,14 +411,17 @@ async function prepImage(src, x0, x1) {
   const x = c.getContext("2d");
   x.filter = "grayscale(1) contrast(1.35) brightness(1.05)";
   x.drawImage(i, sx, 0, sw, i.height, 0, 0, sw, i.height);
-  return c.toDataURL("image/jpeg", 0.9).split(",")[1];
+  const out = c.toDataURL("image/jpeg", 0.9).split(",")[1];
+  if (Object.keys(prepCache).length > 40) for (const k in prepCache) delete prepCache[k];
+  prepCache[key] = out;
+  return out;
 }
 function httpErr(res, data, codes) {
   const e = new Error((data && data.error && (data.error.message || data.error)) || "HTTP " + res.status);
   e.retry = codes.includes(res.status); return e;
 }
 async function callGemini(b64, prompt, c) {
-  await throttle("gemini", 4500);
+  await throttle("gemini", 2000);
   const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.gmodel)}:generateContent`, {
     method: "POST",
     headers: { "Content-Type": "application/json", "x-goog-api-key": c.gkey },
@@ -406,7 +455,7 @@ async function callClaude(b64, prompt, c) {
   return (data.content || []).map(x => x.text || "").join("");
 }
 async function callOpenAI(b64, prompt, c) {
-  await throttle("second", 3000);
+  await throttle("second", 2000);
   const res = await fetch(c.burl.replace(/\/+$/, "") + "/chat/completions", {
     method: "POST",
     headers: { "Content-Type": "application/json", "Authorization": "Bearer " + c.bkey },
@@ -430,7 +479,7 @@ async function callReader(reader, b64, prompt, c) {
     } catch (e) {
       if (e instanceof TypeError || e instanceof SyntaxError) e.retry = true;
       if (!e.retry || a >= 4) throw e;
-      await sleep(6000 * a);
+      await sleep(5000 * a);
     }
   }
 }
@@ -458,12 +507,24 @@ function mergeParsed(list) {
 }
 function finalize(m) {
   const layout = (m.sheet === "sheet2" && names("s2").length) ? "sheet2" : "sheet1";
+  const list = names(layout === "sheet2" ? "s2" : "s1");
   const rows = {}; let bad = 0, filled = 0;
-  for (const n of names(layout === "sheet2" ? "s2" : "s1")) {
+  const claimed = new Set();
+  for (const n of list) {
     const r = m.found[n.toLowerCase()] || { nums: [], reg: null };
     rows[n] = { nums: r.nums.slice(), reg: r.reg };
+    claimed.add(n.toLowerCase());
     if (r.nums.length || r.reg != null) filled++;
     if (r.reg != null && r.reg !== sumN(r.nums)) bad++;
+  }
+  for (const k in m.found) {
+    if (claimed.has(k)) continue;
+    const hit = findMed(k, list);
+    if (hit && !rows[hit].nums.length && (m.found[k].nums.length || m.found[k].reg != null)) {
+      rows[hit] = { nums: m.found[k].nums.slice(), reg: m.found[k].reg };
+      claimed.add(hit.toLowerCase());
+      filled++;
+    }
   }
   return { layout, rows, bad, filled };
 }
@@ -480,19 +541,11 @@ async function readerRead(reader, p, c, strips) {
 }
 const sameRow = (x, y) => x.reg === y.reg && [...x.nums].sort((a, b) => a - b).join("+") === [...y.nums].sort((a, b) => a - b).join("+");
 async function readPage(p, c) {
-  let prim = finalize(await readerRead("main", p, c, c.precision));
-  if (prim.bad > 0 && !c.precision) {
-    const r2 = finalize(await readerRead("main", p, c, true));
-    if (better(r2, prim)) prim = r2;
-  }
+  const prim = finalize(await readerRead("main", p, c, c.precision));
   p.note = "";
-  if (c.bkey && c.burl && c.bmodel) {
+  if (c.useSecond && c.bkey && c.burl && c.bmodel) {
     try {
-      let sec = finalize(await readerRead("second", p, c, c.precision));
-      if (sec.bad > 0 && !c.precision) {
-        const s2 = finalize(await readerRead("second", p, c, true));
-        if (better(s2, sec)) sec = s2;
-      }
+      const sec = finalize(await readerRead("second", p, c, c.precision));
       if (sec.layout !== prim.layout) p.note = "The two readers disagree on the sheet type. Check the Sheet setting.";
       else {
         const useSec = sec.bad < prim.bad;
@@ -522,13 +575,15 @@ $("btnAuto").onclick = async () => {
   else pages = pages.filter(p => p.status !== "verified");
   if (!pages.length) { msg.style.color = "var(--muted)"; msg.textContent = "Nothing to read for this date."; return; }
   running = true; $("btnAuto").disabled = true;
-  let ok = 0, fail = 0, flagged = 0, errs = [];
-  for (let i = 0; i < pages.length; i++) {
-    msg.style.color = "var(--primary)"; msg.textContent = `Reading page ${i + 1} of ${pages.length}...`;
-    try { flagged += await readPage(pages[i], c); ok++; }
-    catch (e) { fail++; errs.push(`Page ${i + 1}: ${e.message}`); }
-    await renderUpload();
-  }
+  let ok = 0, fail = 0, flagged = 0, done = 0, errs = [];
+  msg.style.color = "var(--primary)";
+  await pool(pages, 2, async (p) => {
+    msg.textContent = `Reading page ${++done} of ${pages.length}...`;
+    try {
+      flagged += await readPage(p, c); ok++;
+      const tg = $("tg-" + p.id); if (tg) tg.innerHTML = statusTag(p);
+    } catch (e) { fail++; errs.push(e.message); }
+  });
   running = false; $("btnAuto").disabled = false;
   msg.style.color = fail || flagged ? "var(--bad)" : "var(--ok)";
   msg.textContent = `Done: ${ok} read, ${fail} failed, ${flagged} row(s) to check (sum differs from register total, or the two readers disagree). Open Review or Totals to check red cells.` + (errs.length ? "\n" + errs.join("\n") : "");
@@ -555,9 +610,10 @@ async function renderReview() {
       <td><input data-n="${i}" data-f="reg" inputmode="decimal" value="${r.reg == null ? "" : r.reg}" style="min-width:70px"></td>
       <td id="st${i}">${r.reg == null ? (r.nums.length ? "&#9888;" : "") : bad ? "&#10060;" : "&#9989;"}</td></tr>`;
   }).join("");
+  const pageTotal = list.reduce((a, n) => a + sumN(rowOf(p, n).nums), 0);
   $("reviewBody").innerHTML = `
     <div class="card"><img class="preview" id="pv" src="${p.img}" alt=""><div class="small">Tap the image to open it full size.</div></div>
-    <div class="card tw"><div class="card-title">Numbers on this page ${statusTag(p)}</div>${p.note ? `<div class="msg" style="color:var(--bad)">${esc(p.note)}</div>` : ""}
+    <div class="card tw"><div class="card-title">Numbers on this page ${statusTag(p)} <span class="small">Page total: <b>${pageTotal}</b></span></div>${p.note ? `<div class="msg" style="color:var(--bad)">${esc(p.note)}</div>` : ""}
       <table class="rv"><tr><th>Medicine</th><th>Numbers (use +)</th><th>Sum</th><th>Register total</th><th></th></tr>${body}</table>
       <button class="btn btn-ok btn-b" id="btnVer">${p.status === "verified" ? "Verified - tap to unlock" : "Mark page as verified"}</button>
       <button class="btn btn-o btn-b" id="btnReread">Re-read this page with AI</button>
@@ -600,7 +656,8 @@ async function stepPage(d) {
 $("prevP").onclick = () => stepPage(-1); $("nextP").onclick = () => stepPage(1);
 async function rotCur(deg) {
   const p = (await allPages()).find(x => x.id === S.pid); if (!p) return;
-  p.img = await rotateData(p.img, deg); await putPage(p); renderReview();
+  p.img = await rotateData(p.img, deg); p.thumb = await rotateData(p.thumb || p.img, deg);
+  await putPage(p); renderReview();
 }
 $("rotL").onclick = () => rotCur(270); $("rotR").onclick = () => rotCur(90);
 
@@ -611,7 +668,7 @@ async function buildTotals() {
   const add = n => { const k = n.toLowerCase(); if (!seen.has(k)) { seen.add(k); order.push(n); } };
   names("s1").forEach(add); names("s2").forEach(add);
   pages.forEach(p => Object.keys(p.rows || {}).forEach(add));
-  const used = order.filter(n => pages.some(p => (p.rows && Object.keys(p.rows).some(k => k.toLowerCase() === n.toLowerCase()))));
+  const used = order;
   const drugs = used.map(n => {
     const per = pages.map(p => {
       const key = Object.keys(p.rows || {}).find(k => k.toLowerCase() === n.toLowerCase());
@@ -645,6 +702,14 @@ async function renderTotals() {
     const diff = d.counted - d.reg;
     h += `<td class="tot">${d.counted}</td><td class="tot">${d.reg}${d.missingReg ? " &#9888;" : ""}</td><td class="${diff ? "bad" : "tot"}">${diff}</td></tr>`;
   }
+  h += "<tr><td><b>Page total (all medicines)</b></td>";
+  pages.forEach((p, i) => {
+    const t = drugs.reduce((a, d) => a + (d.per[i] ? d.per[i].counted : 0), 0);
+    h += `<td class="tot">${t}</td>`;
+  });
+  const allC = drugs.reduce((a, d) => a + d.counted, 0);
+  const allR = drugs.reduce((a, d) => a + d.reg, 0);
+  h += `<td class="tot">${allC}</td><td class="tot">${allR}</td><td class="${allC - allR ? "bad" : "tot"}">${allC - allR}</td></tr>`;
   $("totTable").innerHTML = h + "</table>";
 }
 $("btnPrint").onclick = () => window.print();
@@ -657,6 +722,7 @@ $("btnCsv").onclick = async () => {
     d.per.forEach((x, i) => { if (x) lines.push([S.date, q(d.name), i + 1, x.counted, x.reg == null ? "" : x.reg, x.reg == null ? "" : x.reg === x.counted ? "yes" : "NO"].join(",")); });
     lines.push([S.date, q(d.name), "DAY TOTAL", d.counted, d.reg, d.counted === d.reg ? "yes" : "NO"].join(","));
   }
+  lines.push([S.date, '"ALL MEDICINES"', "PAGE TOTALS", ...pages.map((p, i) => drugs.reduce((a, d) => a + (d.per[i] ? d.per[i].counted : 0), 0)).join(",")].join(","));
   download(new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv" }), `ledger-${S.date}.csv`);
 };
 function download(blob, name) {
@@ -678,14 +744,14 @@ $("saveCfg").onclick = () => {
 };
 $("btnBackup").onclick = async () => {
   const c = cfg(); c.gkey = ""; c.ckey = ""; c.bkey = "";
-  download(new Blob([JSON.stringify({ v: 1, cfg: c, pages: await allPages() })], { type: "application/json" }), `ledger-backup-${new Date().toISOString().slice(0, 10)}.json`);
+  download(new Blob([JSON.stringify({ v: 2, cfg: c, pages: await allPages() })], { type: "application/json" }), `ledger-backup-${new Date().toISOString().slice(0, 10)}.json`);
 };
 $("restoreFile").onchange = async e => {
   const f = e.target.files[0]; if (!f) return;
   try {
     const d = JSON.parse(await f.text());
     if (!Array.isArray(d.pages)) throw new Error("Not a ledger backup");
-    for (const p of d.pages) await putPage(p);
+    for (const p of d.pages) { if (!p.thumb && p.img) p.thumb = p.img; await putPage(p); }
     if (d.cfg) { const c = cfg(); d.cfg.gkey = c.gkey; d.cfg.ckey = c.ckey; d.cfg.bkey = c.bkey; saveCfgObj(d.cfg); loadCfgUI(); }
     alert(`Restored ${d.pages.length} page(s).`); render();
   } catch (err) { alert("Restore failed: " + err.message); }
