@@ -2,1126 +2,711 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Daily Medicine Consumption Ledger</title>
 <style>
-:root {
-  --primary: #005a9c; --primary-dark: #003e6b; --accent: #d9230f;
-  --bg: #f4f6f9; --card-bg: #ffffff; --text: #212529; --text-muted: #6c757d;
-  --border: #ced4da; --success: #28a745; --warning: #ffc107; --danger: #dc3545;
-}
-* { box-sizing: border-box; margin: 0; padding: 0; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
-body { background: var(--bg); color: var(--text); padding-bottom: 70px; }
-header { background: var(--primary); color: white; padding: 10px 14px; position: sticky; top: 0; z-index: 100; box-shadow: 0 2px 4px rgba(0,0,0,0.15); display: flex; justify-content: space-between; align-items: center; }
-header h1 { font-size: 1rem; font-weight: 600; }
-header .badge { background: rgba(255,255,255,0.25); padding: 4px 8px; border-radius: 4px; font-size: 0.72rem; }
-nav.tabs { display: flex; background: var(--primary-dark); overflow-x: auto; white-space: nowrap; }
-nav.tabs button { flex: 1; min-width: 75px; padding: 10px 6px; border: none; background: transparent; color: #cfd8dc; font-size: 0.8rem; font-weight: 500; cursor: pointer; }
-nav.tabs button.active { color: #ffffff; border-bottom: 3px solid #ffab00; background: rgba(255,255,255,0.08); font-weight: 700; }
-main { padding: 12px; max-width: 900px; margin: 0 auto; }
-.screen { display: none; }
-.screen.active { display: block; }
-.card { background: var(--card-bg); border-radius: 8px; padding: 14px; margin-bottom: 12px; box-shadow: 0 1px 3px rgba(0,0,0,0.08); border: 1px solid var(--border); }
-.card-title { font-size: 0.95rem; font-weight: 700; color: var(--primary-dark); margin-bottom: 10px; display: flex; justify-content: space-between; align-items: center; }
-button.btn { padding: 8px 12px; border: none; border-radius: 4px; font-size: 0.85rem; font-weight: 600; cursor: pointer; display: inline-flex; align-items: center; justify-content: center; gap: 6px; }
-.btn-primary { background: var(--primary); color: white; }
-.btn-secondary { background: #6c757d; color: white; }
-.btn-success { background: var(--success); color: white; }
-.btn-danger { background: var(--danger); color: white; }
-.btn-outline { background: transparent; border: 1px solid var(--primary) !important; color: var(--primary); }
-.btn-sm { padding: 4px 8px; font-size: 0.75rem; }
-.btn-block { width: 100%; display: flex; margin-top: 6px; }
-button.btn:disabled { opacity: 0.6; cursor: not-allowed; }
-input, select { width: 100%; padding: 8px 10px; border: 1px solid var(--border); border-radius: 4px; font-size: 0.9rem; margin-top: 4px; margin-bottom: 8px; background: white; color: var(--text); }
-label { font-size: 0.8rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: 0.5px; }
-.api-banner { background: #e8f4fd; border: 1px solid #b8daff; border-radius: 6px; padding: 10px; margin-bottom: 12px; font-size: 0.8rem; }
-.row-boundary-rule { background: #fff3cd; border-left: 4px solid #ffc107; padding: 8px 12px; margin-bottom: 12px; font-size: 0.8rem; color: #856404; }
-.viewer-container { position: relative; background: #1a1a1a; border-radius: 6px; overflow: hidden; margin-bottom: 10px; text-align: center; }
-.viewer-toolbar { display: flex; background: rgba(0,0,0,0.85); padding: 6px; gap: 6px; justify-content: center; flex-wrap: wrap; }
-.viewer-toolbar button { background: #495057; color: white; border: none; border-radius: 4px; padding: 5px 8px; font-size: 0.72rem; cursor: pointer; }
-.canvas-wrapper { overflow: auto; max-height: 34vh; display: block; padding: 6px; -webkit-overflow-scrolling: touch; }
-canvas#imageCanvas { display: block; margin: 0 auto; box-shadow: 0 0 10px rgba(0,0,0,0.6); }
-.sticky-viewer { position: sticky; top: 46px; z-index: 90; }
-.quick-input { font-size: 1.5rem; text-align: right; font-weight: 700; border: 2px solid var(--primary); margin: 0; }
-.warn { color: #b35c00; font-weight: 700; }
-.med-row { padding: 8px; border-bottom: 1px solid #f0f0f0; }
-.med-row:nth-child(even) { background: #fafafa; }
-.med-header { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
-.med-name { font-size: 0.85rem; font-weight: 600; flex: 1; }
-.qty-input { width: 120px; text-align: right; font-weight: 700; margin: 0; padding: 6px; font-size: 1rem; border: 2px solid var(--primary); }
-.report-table-wrapper { overflow-x: auto; margin-top: 10px; }
-table.report-table { width: 100%; border-collapse: collapse; font-size: 0.8rem; background: white; }
-table.report-table th, table.report-table td { border: 1px solid var(--border); padding: 6px 8px; text-align: left; }
-table.report-table th { background: #e9ecef; position: sticky; top: 0; }
-.num-cell { text-align: right; font-weight: 600; font-family: monospace; }
-.status-pill { display: inline-block; padding: 2px 6px; border-radius: 10px; font-size: 0.7rem; font-weight: 700; }
-.pill-verified { background: #d4edda; color: #155724; }
-.pill-partial { background: #fff3cd; color: #856404; }
-.pill-bad { background: #f8d7da; color: #721c24; }
-.badge { background: #e9ecef; padding: 2px 8px; border-radius: 10px; font-size: 0.75rem; }
-@media print {
-  body { padding: 0; background: white; }
-  header, nav.tabs, .no-print, .api-banner { display: none !important; }
-  .screen { display: none !important; }
-  #screen-report { display: block !important; }
-  .card { border: none; box-shadow: none; padding: 0; }
-}
+:root{--primary:#005a9c;--dark:#003e6b;--bg:#f4f6f9;--card:#fff;--text:#212529;--muted:#6c757d;--border:#ced4da;--ok:#28a745;--warn:#e0a800;--bad:#dc3545}
+*{box-sizing:border-box;margin:0;padding:0;font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif}
+body{background:var(--bg);color:var(--text);padding-bottom:60px}
+header{background:var(--primary);color:#fff;padding:10px 14px;position:sticky;top:0;z-index:100;display:flex;justify-content:space-between;align-items:center;gap:8px}
+header h1{font-size:1rem}
+.badge{background:rgba(0,0,0,.15);padding:3px 8px;border-radius:10px;font-size:.72rem;font-weight:600;white-space:nowrap}
+nav.tabs{display:flex;background:var(--dark);overflow-x:auto;white-space:nowrap;position:sticky;top:41px;z-index:99}
+nav.tabs button{flex:1;min-width:80px;padding:10px 6px;border:none;background:transparent;color:#cfd8dc;font-size:.8rem;cursor:pointer}
+nav.tabs button.active{color:#fff;border-bottom:3px solid #ffab00;font-weight:700}
+main{padding:12px;max-width:1000px;margin:0 auto}
+.screen{display:none}.screen.active{display:block}
+.card{background:var(--card);border-radius:8px;padding:14px;margin-bottom:12px;border:1px solid var(--border)}
+.card-title{font-size:.95rem;font-weight:700;color:var(--dark);margin-bottom:10px;display:flex;justify-content:space-between;align-items:center;gap:6px;flex-wrap:wrap}
+.btn{padding:8px 12px;border:none;border-radius:4px;font-size:.85rem;font-weight:600;cursor:pointer}
+.btn:disabled{opacity:.5}
+.btn-p{background:var(--primary);color:#fff}.btn-s{background:#6c757d;color:#fff}.btn-ok{background:var(--ok);color:#fff}.btn-d{background:var(--bad);color:#fff}
+.btn-o{background:transparent;border:1px solid var(--primary);color:var(--primary)}
+.btn-sm{padding:4px 8px;font-size:.75rem}.btn-b{width:100%;margin-top:6px}
+input,select,textarea{width:100%;padding:8px 10px;border:1px solid var(--border);border-radius:4px;font-size:.9rem;margin:4px 0 8px;background:#fff;color:var(--text)}
+textarea{min-height:140px;font-family:monospace}
+input[type=checkbox]{width:auto;margin:0 6px 0 0}
+label{font-size:.78rem;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.4px}
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
+.thumb{border:1px solid var(--border);border-radius:6px;padding:6px;background:#fafafa;font-size:.75rem}
+.thumb img{width:100%;height:120px;object-fit:cover;border-radius:4px}
+.thumb select{padding:4px;font-size:.75rem;margin:4px 0}
+.row{display:flex;gap:4px;flex-wrap:wrap}
+.tag{display:inline-block;padding:1px 6px;border-radius:8px;font-size:.68rem;font-weight:700;color:#fff}
+.t-new{background:#6c757d}.t-read{background:var(--warn)}.t-ver{background:var(--ok)}.t-bad{background:var(--bad)}
+.msg{font-size:.85rem;font-weight:600;margin-top:8px;white-space:pre-wrap}
+.tw{overflow-x:auto}
+table{border-collapse:collapse;width:100%;font-size:.8rem}
+th,td{border:1px solid var(--border);padding:5px 7px;text-align:right;white-space:nowrap}
+th:first-child,td:first-child{text-align:left;position:sticky;left:0;background:#fff}
+th{background:#e9eef4;color:var(--dark)}
+td.bad{background:#fde8ea;color:var(--bad);font-weight:700}
+td.warn{background:#fff6dc}
+td.tot{background:#eef7ee;font-weight:700}
+.rv td{padding:3px}.rv input{margin:0;padding:6px;min-width:90px}
+.rv td:first-child{white-space:normal;min-width:110px}
+.preview{width:100%;max-height:70vh;object-fit:contain;background:#222;border-radius:6px}
+.small{font-size:.78rem;color:var(--muted)}
+.alt{font-size:.7rem;color:#8a6d00;margin-top:3px;font-weight:600}
+@media print{header,nav.tabs,.noprint{display:none!important}.screen{display:none!important}#s-totals{display:block!important}}
 </style>
 </head>
 <body>
-
-<header>
-  <div>
-    <h1>Daily Medicine Consumption Ledger</h1>
-    <span style="font-size: 0.7rem; opacity: 0.85;">Manual Entry &bull; Register-Verified</span>
-  </div>
-  <div class="badge" id="storageStatusBadge" style="background:#d9230f;">Script NOT running</div>
-</header>
-
-<nav class="tabs no-print">
-  <button class="tab-btn active" onclick="switchTab('screen-workspace')">1. Date &amp; Runs</button>
-  <button class="tab-btn" onclick="switchTab('screen-review')">2. OCR &amp; Review</button>
-  <button class="tab-btn" onclick="switchTab('screen-report')">3. Totals &amp; Reports</button>
-  <button class="tab-btn" onclick="switchTab('screen-master')">Medicines</button>
-  <button class="tab-btn" onclick="switchTab('screen-backup')">Storage &amp; Backup</button>
+<header><h1>Medicine Consumption Ledger</h1><span class="badge" id="dateBadge"></span></header>
+<nav class="tabs">
+  <button data-t="upload" class="active">1 Upload</button>
+  <button data-t="review">2 Review</button>
+  <button data-t="totals">3 Totals</button>
+  <button data-t="settings">4 Settings</button>
 </nav>
-
 <main>
-  <!-- TAB 1 -->
-  <section id="screen-workspace" class="screen active">
-    <div class="card">
-      <div class="card-title">Calendar Date &amp; Calculation Run</div>
-      <label>Reporting Date</label>
-      <input type="date" id="selectedDateInput" onchange="onDateChanged()">
-      <label>Active Calculation Run on this Date</label>
-      <div style="display:flex; gap:6px;">
-        <select id="activeCalcSelector" onchange="onCalculationRunChanged()" style="margin:0;">
-          <option value="run_default">Calculation Run 1</option>
-        </select>
-        <button class="btn btn-outline btn-sm" onclick="promptNewCalculationRun()">+ New Run</button>
-        <button class="btn btn-secondary btn-sm" onclick="renameCurrentRun()">Rename</button>
-      </div>
+
+<section class="screen active" id="s-upload">
+  <div class="card">
+    <div class="card-title">Date of register <span class="small" id="pageCount"></span></div>
+    <input type="date" id="date">
+    <label>Add photos (max 30 pages per date)</label>
+    <input type="file" id="files" accept="image/*" multiple>
+    <div class="small">Tip: photograph each page flat, in good light, one page per photo. Pages are shrunk to 2400 px so handwriting stays readable.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Auto-extract (AI)</div>
+    <label><input type="checkbox" id="precision">Precision mode (reads each page in 3 strips; slower, more accurate)</label>
+    <label><input type="checkbox" id="skipRead" checked>Skip pages already read or verified</label>
+    <button class="btn btn-p btn-b" id="btnAuto">Auto-extract all pages for this date</button>
+    <div class="msg" id="autoMsg"></div>
+    <div class="small" style="margin-top:6px">Each page is checked automatically: the sum of the handwritten numbers must equal the Total Quantity Dispensed. If not, the page is re-read once in strips. If a second reader is set in Settings, rows where the two readers disagree are marked ? for you. Anything still wrong is flagged for you.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Pages for this date</div>
+    <div class="grid" id="thumbs"></div>
+    <div id="noPages" class="small">No pages uploaded yet.</div>
+  </div>
+</section>
+
+<section class="screen" id="s-review">
+  <div class="card">
+    <div class="card-title">Review page</div>
+    <select id="pageSel"></select>
+    <div class="row noprint">
+      <button class="btn btn-s btn-sm" id="prevP">&larr; Prev</button>
+      <button class="btn btn-s btn-sm" id="nextP">Next &rarr;</button>
+      <button class="btn btn-o btn-sm" id="rotL">&#8634; Rotate</button>
+      <button class="btn btn-o btn-sm" id="rotR">&#8635; Rotate</button>
     </div>
+  </div>
+  <div id="reviewBody"></div>
+</section>
 
-    <div class="card">
-      <div class="card-title">
-        <span>Upload Photos for <strong id="uploadTargetRunLabel" style="color:var(--primary);">Calculation Run 1</strong></span>
-      </div>
-      <p style="font-size:0.75rem; color:var(--text-muted); margin-bottom:8px;">
-        Select your register photos, then tap <strong>Load Selected Photos</strong>:
-      </p>
-      <div style="display:flex; gap:6px; flex-wrap:wrap; align-items:center;">
-        <input type="file" id="batchImageInput" accept="image/*" multiple onchange="onFileSelectionChanged()" style="flex:1; margin:0;">
-        <button class="btn btn-primary" id="btnProcessPhotos" onclick="processSelectedFiles()">Load Selected Photos</button>
-      </div>
-      <div id="uploadProgress" style="font-size:0.85rem; font-weight:700; margin-top:8px;"></div>
+<section class="screen" id="s-totals">
+  <div class="card">
+    <div class="card-title">Totals for <span id="totDate"></span>
+      <span class="row noprint">
+        <button class="btn btn-o btn-sm" id="btnCsv">CSV</button>
+        <button class="btn btn-o btn-sm" id="btnPrint">Print</button>
+      </span>
     </div>
+    <div class="msg" id="totStatus"></div>
+    <div class="small">Each cell is the counted sum (handwritten numbers added up) for that page. Red = differs from the register total written on the page. Day columns add all pages.</div>
+  </div>
+  <div class="card tw" id="totTable"></div>
+</section>
 
-    <div class="card">
-      <div class="card-title">Pages in Active Run</div>
-      <div id="datePagesList">No pages uploaded yet.</div>
-    </div>
-  </section>
-
-  <!-- TAB 2 -->
-  <section id="screen-review" class="screen">
-    <div class="card">
-      <div class="card-title">
-        <span>Page</span>
-        <div style="display:flex; gap:6px;">
-          <select id="reviewPageSelector" style="width:auto; max-width:200px; margin:0;" onchange="loadPageForReview()"></select>
-          <button class="btn btn-danger btn-sm" onclick="deleteActivePage()">Delete</button>
-        </div>
-      </div>
-      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:8px;">
-        <div>
-          <label>Layout Type</label>
-          <select id="pageLayoutType" onchange="onLayoutChanged()">
-            <option value="sheet1">Sheet 1 (Acetylsalicylic &rarr; Hydrochlorothiazide)</option>
-            <option value="sheet2">Sheet 2 (Ibuprofen &rarr; Zinc + Custom)</option>
-          </select>
-        </div>
-        <div>
-          <label>Page Number</label>
-          <input type="number" id="reviewPageNumber" placeholder="e.g. 1" onchange="updatePageMetadata()">
-        </div>
-      </div>
-      <div class="row-boundary-rule" style="margin:4px 0 0;"><strong>RULE:</strong> count <strong>every handwritten number</strong> in the medicine&rsquo;s column, down to (not including) the <em>Total Quantity Dispensed</em> row &mdash; even if written on a stock line. Then type the register&rsquo;s own total in <em>Register total</em>; the app checks the two. Ignore pen dots.</div>
-    </div>
-
-    <div class="viewer-container sticky-viewer">
-      <div class="viewer-toolbar">
-        <button onclick="rotateImage(-90)">&larr; 90&deg;</button>
-        <button onclick="rotateImage(90)">90&deg; &rarr;</button>
-        <button onclick="zoomImage(1.3)">Zoom +</button>
-        <button onclick="zoomImage(0.77)">Zoom &minus;</button>
-        <button onclick="resetImageTransform()">Fit</button>
-      </div>
-      <div class="canvas-wrapper"><canvas id="imageCanvas"></canvas></div>
-    </div>
-
-    <div class="card">
-      <div class="card-title">
-        <span>Entry</span>
-        <span class="badge" id="entryProgressBadge">0 entered</span>
-      </div>
-      <div style="display:flex; gap:6px;">
-        <select id="entryMode" onchange="onEntryModeChanged()" style="margin:0;">
-          <option value="quick">Quick (one at a time)</option>
-          <option value="list">Full list</option>
-        </select>
-        <button class="btn btn-success" onclick="markPageComplete()" style="white-space:nowrap;">Mark Complete</button>
-      </div>
-      <button class="btn btn-outline btn-sm" style="margin-top:6px;" onclick="addExtraMedicine()">+ Add handwritten extra medicine</button>
-      <div id="extractMsg" style="font-size:0.8rem; font-weight:600; margin-top:6px; color:var(--primary);"></div>
-    </div>
-
-    <div id="quickCard" class="card" style="border:2px solid var(--primary);">
-      <div class="card-title"><span id="quickCounter">-</span><span id="quickStatus" style="font-size:0.75rem;"></span></div>
-      <div id="quickMedName" style="font-size:1.05rem; font-weight:700; margin-bottom:8px;">Open a page to begin.</div>
-      <div style="display:flex; gap:6px; align-items:center;">
-        <input type="text" inputmode="tel" id="quickInput" class="quick-input" placeholder="e.g. 15+30+5" oninput="updateQuickSum()" onkeydown="quickKey(event)">
-        <button class="btn btn-secondary" style="font-size:1.3rem; padding:8px 16px;" onclick="quickInsertPlus()">+</button>
-      </div>
-      <div id="quickSum" style="font-size:0.85rem; font-weight:600; min-height:1.3em; margin:6px 0 2px;"></div>
-      <div style="display:flex; gap:8px; align-items:center; margin-bottom:4px;">
-        <label style="white-space:nowrap; text-transform:none; font-size:0.78rem;">Register total (D):</label>
-        <input type="text" inputmode="numeric" id="quickReg" class="quick-input" style="font-size:1.2rem; width:110px;" placeholder="optional" oninput="updateQuickSum()" onkeydown="quickKey(event)">
-      </div>
-      <div id="quickCheck" style="font-size:0.85rem; min-height:1.3em; margin-bottom:6px;"></div>
-      <div style="display:flex; gap:6px;">
-        <button class="btn btn-outline" style="flex:1;" onclick="quickNext(-1)">&larr; Prev</button>
-        <button class="btn btn-primary" style="flex:2;" onclick="quickNext(1)">Save &amp; Next &rarr;</button>
-      </div>
-      <p style="font-size:0.72rem; color:var(--text-muted); margin-top:6px;">Leave both boxes blank and tap Next to skip. Type 0 if nothing was issued.</p>
-    </div>
-
-    <div id="listCard" class="card" style="display:none;">
-      <div id="medEntryList" style="max-height: 480px; overflow-y: auto;"></div>
-    </div>
-  </section>
-
-  <!-- TAB 3 -->
-  <section id="screen-report" class="screen">
-    <div class="card">
-      <div class="card-title no-print">
-        <span>Consumption Report</span>
-        <div style="display:flex; gap:6px;">
-          <button class="btn btn-primary btn-sm" onclick="window.print()">Print / PDF</button>
-          <button class="btn btn-outline btn-sm" onclick="exportReportCSV()">Export CSV</button>
-          <button class="btn btn-outline btn-sm" onclick="exportReportHTML()">Export HTML</button>
-        </div>
-      </div>
-
-      <div class="no-print" style="margin-bottom:12px; background:#f8f9fa; padding:10px; border-radius:6px; border:1px solid var(--border);">
-        <label>Report Scope:</label>
-        <select id="reportScopeSelector" onchange="generateDailyReport()" style="margin-top:4px; font-weight:600;">
-          <option value="activeRun">Active Calculation Run Only</option>
-          <option value="combinedDate">Combined Grand Total (All Runs on this Date)</option>
-        </select>
-      </div>
-
-      <div id="reportHeaderSection" style="margin-bottom:12px;">
-        <h2 style="font-size:1.1rem; color:var(--primary-dark);">Daily Medicine Consumption Ledger</h2>
-        <div style="font-size:0.8rem; margin-top:4px; display:grid; grid-template-columns: 1fr 1fr; gap:4px;">
-          <div><strong>Date:</strong> <span id="repDateTag">-</span></div>
-          <div><strong>Scope / Session:</strong> <span id="repRunTag" style="color:var(--primary); font-weight:700;">-</span></div>
-          <div><strong>Completeness:</strong> <span id="repCompletenessBadge" class="status-pill pill-partial">Checking...</span></div>
-          <div><strong>Pages Evaluated:</strong> <span id="repPagesCount">0</span></div>
-        </div>
-      </div>
-
-      <div class="report-table-wrapper">
-        <table class="report-table" id="dailyReportTable">
-          <thead>
-            <tr>
-              <th style="width: 35px;">#</th>
-              <th>Approved Medicine Name &amp; Strength</th>
-              <th>Sheet</th>
-              <th style="text-align:right;">Counted Total</th>
-              <th style="text-align:right;">Register Total</th>
-              <th>Check</th>
-              <th>Pages</th>
-            </tr>
-          </thead>
-          <tbody id="dailyReportTbody">
-            <tr><td colspan="7" style="text-align:center;">Select a date to display consumption.</td></tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-  </section>
-
-  <!-- TAB 4 -->
-  <section id="screen-master" class="screen">
-    <div class="card">
-      <div class="card-title">Approved Medicine Master (<span id="medMasterCount">0</span>)</div>
-      <div id="masterMedList" style="max-height: 500px; overflow-y: auto;"></div>
-    </div>
-  </section>
-
-  <!-- TAB 5 -->
-  <section id="screen-backup" class="screen">
-    <div class="card">
-      <div class="card-title">Local Storage &amp; Full Backup</div>
-      <p style="font-size:0.8rem; color:var(--text-muted); margin-bottom:10px;">
-        All data is preserved locally in your browser's IndexedDB. Download a backup before clearing browser data.
-      </p>
-      <button class="btn btn-primary btn-block" onclick="exportFullJSONBackup()">Download Full JSON Backup</button>
-      <hr style="margin: 16px 0; border: none; border-top: 1px solid var(--border);">
-      <button class="btn btn-outline btn-block" onclick="purgeAllProcessedPhotos()">Purge All Photos (Frees ~99% Phone Memory)</button>
-    </div>
-  </section>
+<section class="screen" id="s-settings">
+  <div class="card">
+    <div class="card-title">AI reader</div>
+    <label>Provider</label>
+    <select id="provider">
+      <option value="gemini">Google Gemini (free tier, no card)</option>
+      <option value="claude">Anthropic Claude (paid)</option>
+    </select>
+    <label>Gemini API key (free at aistudio.google.com/apikey)</label>
+    <input type="password" id="gkey" placeholder="AIza...">
+    <label>Gemini model</label>
+    <input id="gmodel">
+    <label>Anthropic API key</label>
+    <input type="password" id="ckey" placeholder="sk-ant-...">
+    <label>Claude model</label>
+    <input id="cmodel">
+    <div class="small">Keys stay in this browser only. Free-tier Gemini has daily and per-minute limits, so large days may need a short wait; the app retries automatically. Google may use free-tier inputs to improve its products, so photograph only the register page. For a paid key, set a monthly spend limit in the provider console.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Second reader (optional, free, recommended)</div>
+    <label>Base URL</label>
+    <input id="burl" placeholder="https://api.groq.com/openai/v1">
+    <label>API key</label>
+    <input type="password" id="bkey">
+    <label>Vision model name</label>
+    <input id="bmodel" placeholder="copy a vision model name from the provider's list">
+    <div class="small">Any OpenAI-compatible service with a vision model works, for example Groq (console.groq.com) or OpenRouter (base URL https://openrouter.ai/api/v1, pick a free vision model). Leave the key empty to use one reader. Model names change, so copy the current one from the provider.</div>
+  </div>
+  <div class="card">
+    <div class="card-title">Medicine names, in column order (one per line)</div>
+    <label>Sheet 1</label>
+    <textarea id="s1"></textarea>
+    <label>Sheet 2 (leave empty if you have only one sheet type)</label>
+    <textarea id="s2"></textarea>
+    <div class="small">Paste the names from SHEET1_NAMES and SHEET2_NAMES in your original file, one per line, in the same left-to-right order as the register columns. Spelling must be consistent: the same name in both sheets is added together in the day total.</div>
+    <button class="btn btn-ok btn-b" id="saveCfg">Save settings</button>
+    <div class="msg" id="cfgMsg"></div>
+  </div>
+  <div class="card">
+    <div class="card-title">Backup</div>
+    <button class="btn btn-p btn-b" id="btnBackup">Download full backup (.json)</button>
+    <label style="display:block;margin-top:10px">Restore backup</label>
+    <input type="file" id="restoreFile" accept=".json">
+    <button class="btn btn-d btn-b" id="btnWipeDate">Delete all pages of selected date</button>
+    <div class="small">Browser storage can be cleared by the phone. Download a backup after each day.</div>
+  </div>
+</section>
 </main>
 
 <script>
-const SHEET1_NAMES = [
-  "Acetylsalicylic acid 75mg Tablet", "Albendazole 10ml Suspension", "Albendazole 400mg Tablet",
-  "Amitriptyline 25 mg Tablet", "Amlodipine 5mg Tablet", "Amoxicillin 125mg/5ml powder for Suspension 100ml",
-  "Amoxicillin 250 mg Capsule", "Amoxicillin 500mg Capsule", "Amoxicillin, 500mg + Clavulanic Acid, 125mg, Tablet",
-  "Antacid Tablet (aluminum and/or magnesium salts)", "Atenolol 50mg Tablet",
-  "Azithromycin 200mg/5ml powder for oral Suspension 15ml", "Azithromycin 250 mg Tablet",
-  "Azithromycin 500mg Tablet", "Bisoprolol 2.5mg Tablet", "Bromhexine Hydrochloride 4mg/5ml syrup",
-  "Calcium 500mg Tablet", "Carbonyl Iron 50mg + Folic Acid 0.5mg + Zinc Sulphate 61.8mg Capsule",
-  "Carbamazepine 200mg Tablet", "Cefixime 100mg/5ml Suspension", "Cefixime 200 mg Tablet",
-  "Cetirizine 10 mg Tablet", "Chloramphenicol 1% eye drops", "Chlorpheniramine maleate 2mg/ 5ml 100 ml oral solution",
-  "Ciprofloxacin 0.3% eye drops", "Ciprofloxacin 500mg Tablet", "Clotrimazole 1% cream",
-  "Clotrimazole vaginal 200mg Tablet", "Diazepam 5mg Tablet", "Diclofenac 50 mg Tablet",
-  "Domperidone 10mg Tablet", "Flucloxacillin 125mg/5ml oral Suspension", "Flucloxacillin 250mg Capsule",
-  "Flucloxacillin 500mg Capsule", "Fluconazole 50mg Capsule", "Fluoxetine 20mg Capsule",
-  "Furosemide 40mg Tablet", "Glibenclamide 5mg Tablet", "Gliclazide 80mg Tablet",
-  "Hydrochlorothiazide 12.5mg Tablet"
-];
+"use strict";
+const MAXP = 30;
+const $ = id => document.getElementById(id);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+const sleep = ms => new Promise(r => setTimeout(r, ms));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 
-const SHEET2_NAMES = [
-  "Ibuprofen 400mg Tablet", "Lactulose 10g/15ml oral solution", "Losartan 50mg Tablet",
-  "Metformin 500 mg Tablet", "Methyldopa 250mg Tablet", "Metronidazole 400mg Tablet",
-  "Miconazole 2% cream", "Montelukast 10mg Tablet", "Multivitamin Tablet", "Mupirocin 2% ointment",
-  "Neomycin Sulphate + Bacitracin Zinc + Polymyxin B Sulphate", "Nystatin 100,000 IU/ml oral Suspension",
-  "Olanzapine 10 mg Tablet", "Omeprazole 20mg Capsule", "Ondansetron 4mg/5ml 50ml syrup",
-  "Ondansetron 8 mg Tablet", "Oral rehydration salts 10.25g/500ml", "Paracetamol 120mg/5ml oral solution",
-  "Paracetamol 500mg Tablet", "Paracetamol, 250mg, Supp", "Paracetamol, 500mg, Supp",
-  "Permethrin 5% cream/lotion", "Prednisolone 20mg Tablet", "Procyclidine Hydrochloride 5 mg Tablet",
-  "Risperidone 1 mg Tablet", "Rosuvastatin 10mg Tablet", "Salbutamol 0.1 mg/dose Inhaler",
-  "Salbutamol, syrup, 2mg/5ml in 100ml", "Silver sulfadiazine 1% cream", "Simeticone 67mg/ml paediatric drops",
-  "Sodium chloride 0.9% 10ml Nasal Drop", "Sodium valproate 200mg (valproic acid)",
-  "Sodium valproate 500mg Tablet (valproic acid)", "Tiemonium methylsulphate 50mg Tablet",
-  "Tolperisone, Hydrochloride, 50mg, Tablet", "Tranexamic acid 500mg Capsule",
-  "Vitamin B compound/complex Tablet", "Vitamin C (ascorbic acid) 250mg Tablet",
-  "Zinc dispersible 20mg Tablet", "Zinc sulphate syrup 2mg/ml, syrup",
-  "Cap Doxycycline 100mg", "Tab Montelukast 4mg", "Syr Ambroxol HCl", "P/D Ambroxol HCl",
-  "Tab Nitroglycerine 2.6mg", "Tab Bisoprolol 5mg", "Tab Cefuroxime 250mg", "Tab Levocetirizine 5mg"
-];
-
-const DEFAULT_IRC_MEDICINES = [
-  ...SHEET1_NAMES.map((name, i) => ({ id: i + 1, name, sheet: "sheet1", col: i + 1 })),
-  ...SHEET2_NAMES.map((name, i) => ({ id: i + 41, name, sheet: "sheet2", col: i + 1 }))
-];
-
-window.addEventListener("error", (e) => {
-  const p = document.getElementById("uploadProgress");
-  if (p) p.innerHTML = `<span style="color:#dc3545;">Error: ${e.message}</span>`;
-});
-window.addEventListener("unhandledrejection", (e) => {
-  const p = document.getElementById("uploadProgress");
-  if (p) p.innerHTML = `<span style="color:#dc3545;">Error: ${(e.reason && e.reason.message) || e.reason}</span>`;
-});
-
-// In-memory fallback in case IndexedDB fails on mobile Chrome
-window.MEMORY_PAGES = [];
-window.MEMORY_RUNS = [];
-window.MEMORY_ENTRIES = [];
-
-// Insert or replace a record (by key) in an in-memory array
-function upsertMemory(arr, keyField, record) {
-  const i = arr.findIndex(r => r[keyField] === record[keyField]);
-  if (i >= 0) arr[i] = record; else arr.push(record);
-}
-
-const DB_NAME = "DailyMedicineLedgerDB_V5";
-let db = null;
-
-function initIndexedDB() {
-  return new Promise((resolve) => {
-    try {
-      const request = indexedDB.open(DB_NAME, 1);
-      request.onupgradeneeded = (e) => {
-        const d = e.target.result;
-        if (!d.objectStoreNames.contains("medicines")) d.createObjectStore("medicines", { keyPath: "id" });
-        if (!d.objectStoreNames.contains("runs")) d.createObjectStore("runs", { keyPath: "calcId" });
-        if (!d.objectStoreNames.contains("pages")) d.createObjectStore("pages", { keyPath: "id" });
-        if (!d.objectStoreNames.contains("entries")) d.createObjectStore("entries", { keyPath: "key" });
-      };
-      request.onsuccess = async (e) => {
-        db = e.target.result;
-        await seedMedicines();
-        resolve(db);
-      };
-      request.onerror = () => resolve(null);
-    } catch (e) { resolve(null); }
+/* ---------- storage ---------- */
+let db;
+function openDB() {
+  return new Promise((res, rej) => {
+    const r = indexedDB.open("ledger", 1);
+    r.onupgradeneeded = () => r.result.createObjectStore("pages", { keyPath: "id" });
+    r.onsuccess = () => { db = r.result; res(); };
+    r.onerror = () => rej(r.error);
   });
 }
+function tx(mode, fn) {
+  return new Promise((res, rej) => {
+    const t = db.transaction("pages", mode);
+    const req = fn(t.objectStore("pages"));
+    t.oncomplete = () => res(req && req.result);
+    t.onerror = () => rej(t.error);
+    t.onabort = () => rej(t.error);
+  });
+}
+const allPages = () => tx("readonly", s => s.getAll());
+const putPage = p => tx("readwrite", s => s.put(p));
+const delPage = id => tx("readwrite", s => s.delete(id));
+async function pagesOf(date) {
+  return (await allPages()).filter(p => p.date === date).sort((a, b) => a.idx - b.idx);
+}
 
-async function seedMedicines() {
-  if (!db) return;
+const DEF = {
+  provider: "gemini", gkey: "", ckey: "",
+  gmodel: "gemini-2.5-flash", cmodel: "claude-sonnet-5-5",
+  burl: "https://api.groq.com/openai/v1", bkey: "", bmodel: "",
+  s1: "Medicine A\nMedicine B\nMedicine C", s2: ""
+};
+function cfg() {
+  try { return Object.assign({}, DEF, JSON.parse(localStorage.getItem("cfg") || "{}")); }
+  catch (e) { return Object.assign({}, DEF); }
+}
+function saveCfgObj(c) { try { localStorage.setItem("cfg", JSON.stringify(c)); } catch (e) {} }
+const names = k => (cfg()[k] || "").split("\n").map(s => s.trim()).filter(Boolean);
+const listFor = p => names(p.layout === "sheet2" ? "s2" : "s1");
+
+/* ---------- helpers ---------- */
+const sumN = a => (a || []).reduce((x, y) => x + y, 0);
+const parseNums = s => (s.match(/\d+(\.\d+)?/g) || []).map(Number);
+const S = { date: "", pid: null };
+function rowOf(p, name) { return (p.rows && p.rows[name]) || { nums: [], reg: null }; }
+function mism(p) {
+  let n = 0;
+  for (const name of listFor(p)) {
+    const r = rowOf(p, name);
+    if (r.alt || (r.reg != null && r.reg !== sumN(r.nums))) n++;
+  }
+  return n;
+}
+function statusTag(p) {
+  if (p.status === "verified") return '<span class="tag t-ver">verified</span>';
+  if (p.status === "read") {
+    const m = mism(p);
+    return m ? `<span class="tag t-bad">${m} to check</span>` : '<span class="tag t-read">read, check</span>';
+  }
+  return '<span class="tag t-new">new</span>';
+}
+
+/* ---------- images ---------- */
+function loadImg(src) {
+  return new Promise((res, rej) => { const i = new Image(); i.onload = () => res(i); i.onerror = () => rej(new Error("Image load failed")); i.src = src; });
+}
+async function compress(file) {
+  const u = URL.createObjectURL(file);
   try {
-    const count = await getCount("medicines");
-    if (count === 0) {
-      const tx = db.transaction("medicines", "readwrite");
-      const store = tx.objectStore("medicines");
-      DEFAULT_IRC_MEDICINES.forEach(m => store.put(m));
-      await new Promise(r => { tx.oncomplete = r; tx.onerror = r; tx.onabort = r; });
+    const i = await loadImg(u);
+    const k = Math.min(1, 2400 / Math.max(i.width, i.height));
+    const c = document.createElement("canvas");
+    c.width = Math.round(i.width * k); c.height = Math.round(i.height * k);
+    c.getContext("2d").drawImage(i, 0, 0, c.width, c.height);
+    return c.toDataURL("image/jpeg", 0.88);
+  } finally { URL.revokeObjectURL(u); }
+}
+async function rotateData(data, deg) {
+  const i = await loadImg(data);
+  const sw = deg % 180 !== 0;
+  const w = sw ? i.height : i.width, h = sw ? i.width : i.height;
+  const c = document.createElement("canvas"); c.width = w; c.height = h;
+  const x = c.getContext("2d");
+  x.translate(w / 2, h / 2); x.rotate(deg * Math.PI / 180);
+  x.drawImage(i, -i.width / 2, -i.height / 2);
+  return c.toDataURL("image/jpeg", 0.88);
+}
+
+/* ---------- tabs ---------- */
+function showTab(t) {
+  document.querySelectorAll("nav.tabs button").forEach(b => b.classList.toggle("active", b.dataset.t === t));
+  document.querySelectorAll(".screen").forEach(s => s.classList.toggle("active", s.id === "s-" + t));
+  render();
+}
+document.querySelectorAll("nav.tabs button").forEach(b => b.onclick = () => showTab(b.dataset.t));
+function activeTab() { return document.querySelector("nav.tabs button.active").dataset.t; }
+async function render() {
+  $("dateBadge").textContent = S.date || "no date";
+  const t = activeTab();
+  if (t === "upload") await renderUpload();
+  if (t === "review") await renderReview();
+  if (t === "totals") await renderTotals();
+}
+
+/* ---------- upload ---------- */
+async function renderUpload() {
+  const pages = S.date ? await pagesOf(S.date) : [];
+  $("pageCount").textContent = `${pages.length} / ${MAXP} pages`;
+  $("noPages").style.display = pages.length ? "none" : "block";
+  $("thumbs").innerHTML = pages.map((p, i) => `
+    <div class="thumb">
+      <img src="${p.img}" alt="">
+      <div><b>Page ${i + 1}</b> ${statusTag(p)}</div>
+      <select data-lay="${p.id}">
+        <option value="sheet1" ${p.layout !== "sheet2" ? "selected" : ""}>Sheet 1</option>
+        <option value="sheet2" ${p.layout === "sheet2" ? "selected" : ""}>Sheet 2</option>
+      </select>
+      <div class="row">
+        <button class="btn btn-o btn-sm" data-rot="${p.id}">&#8635;</button>
+        <button class="btn btn-o btn-sm" data-open="${p.id}">Review</button>
+        <button class="btn btn-d btn-sm" data-del="${p.id}">&times;</button>
+      </div>
+    </div>`).join("");
+}
+$("thumbs").addEventListener("change", async e => {
+  const id = e.target.dataset.lay; if (!id) return;
+  const p = (await allPages()).find(x => x.id === id); if (!p) return;
+  p.layout = e.target.value; await putPage(p); render();
+});
+$("thumbs").addEventListener("click", async e => {
+  const b = e.target.closest("button"); if (!b) return;
+  const all = await allPages();
+  if (b.dataset.rot) {
+    const p = all.find(x => x.id === b.dataset.rot);
+    p.img = await rotateData(p.img, 90); await putPage(p); render();
+  } else if (b.dataset.del) {
+    if (confirm("Delete this page and its numbers?")) { await delPage(b.dataset.del); render(); }
+  } else if (b.dataset.open) { S.pid = b.dataset.open; showTab("review"); }
+});
+$("date").addEventListener("change", () => { S.date = $("date").value; S.pid = null; try { localStorage.setItem("lastDate", S.date); } catch (e) {} render(); });
+$("files").addEventListener("change", async e => {
+  if (!S.date) { alert("Pick the register date first."); e.target.value = ""; return; }
+  const files = [...e.target.files]; e.target.value = "";
+  const pages = await pagesOf(S.date);
+  const room = MAXP - pages.length;
+  if (room <= 0) { alert(`This date already has ${MAXP} pages.`); return; }
+  if (files.length > room) alert(`Only ${room} more page(s) fit for this date (max ${MAXP}). The first ${room} photos will be added.`);
+  let idx = pages.reduce((m, p) => Math.max(m, p.idx), 0);
+  const msg = $("autoMsg");
+  for (const f of files.slice(0, room)) {
+    try {
+      msg.style.color = "var(--primary)"; msg.textContent = "Adding " + f.name + "...";
+      const img = await compress(f);
+      await putPage({ id: uid(), date: S.date, idx: ++idx, layout: "sheet1", img, rows: {}, status: "new" });
+    } catch (err) { msg.style.color = "var(--bad)"; msg.textContent = "Could not add " + f.name + ": " + err.message; }
+  }
+  if (msg.textContent.startsWith("Adding")) msg.textContent = "";
+  render();
+});
+
+/* ---------- AI extraction ---------- */
+function runCfg() { return Object.assign(cfg(), { precision: !!($("precision") && $("precision").checked) }); }
+const lastCall = {};
+async function throttle(key, ms) {
+  const w = (lastCall[key] || 0) + ms - Date.now();
+  if (w > 0) await sleep(w);
+  lastCall[key] = Date.now();
+}
+function buildPrompt(note) {
+  const l1 = names("s1").map((n, i) => `${i + 1}. ${n}`).join("\n");
+  const l2 = names("s2").map((n, i) => `${i + 1}. ${n}`).join("\n");
+  return `This is one page of a pharmacy dispensing register. Each column is one medicine. The page is either SHEET1 or SHEET2; decide by the medicine names printed in the column headers.
+${note ? "\nIMPORTANT: " + note + "\n" : ""}
+SHEET1 columns, left to right:
+${l1}
+${l2 ? `\nSHEET2 columns, left to right:\n${l2}\n` : ""}
+For every column, read EVERY handwritten number above the "Total Quantity Dispensed" row (even numbers written on a stock line), as a list, and read the handwritten number in the "Total Quantity Dispensed" row as "reg". Ignore pen dots, strike-throughs of printed text and printed text. Do not add the numbers yourself; list them exactly as written. Skip handwritten columns that are not in the list.
+
+Return ONLY JSON, no other text:
+{"sheet":"sheet1","rows":[{"name":"<exact name from the list>","nums":[15,30,5],"reg":50}]}
+Use "nums":[] for a blank column and "reg":null if the total is blank or unreadable.`;
+}
+function parseJSON(text) {
+  const t = String(text).replace(/```json|```/g, "");
+  const m = t.match(/\{[\s\S]*\}/);
+  if (!m) throw new Error("AI reply had no JSON");
+  return JSON.parse(m[0]);
+}
+async function prepImage(src, x0, x1) {
+  const i = await loadImg(src);
+  const sx = Math.round(i.width * x0), sw = Math.round(i.width * (x1 - x0));
+  const c = document.createElement("canvas");
+  c.width = sw; c.height = i.height;
+  const x = c.getContext("2d");
+  x.filter = "grayscale(1) contrast(1.35) brightness(1.05)";
+  x.drawImage(i, sx, 0, sw, i.height, 0, 0, sw, i.height);
+  return c.toDataURL("image/jpeg", 0.9).split(",")[1];
+}
+function httpErr(res, data, codes) {
+  const e = new Error((data && data.error && (data.error.message || data.error)) || "HTTP " + res.status);
+  e.retry = codes.includes(res.status); return e;
+}
+async function callGemini(b64, prompt, c) {
+  await throttle("gemini", 4500);
+  const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${encodeURIComponent(c.gmodel)}:generateContent`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "x-goog-api-key": c.gkey },
+    body: JSON.stringify({
+      contents: [{ parts: [{ inline_data: { mime_type: "image/jpeg", data: b64 } }, { text: prompt }] }],
+      generationConfig: { temperature: 0, responseMimeType: "application/json" }
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw httpErr(res, data, [429, 500, 502, 503]);
+  const parts = (((data.candidates || [])[0] || {}).content || {}).parts || [];
+  return parts.map(x => x.text || "").join("");
+}
+async function callClaude(b64, prompt, c) {
+  await throttle("claude", 500);
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json", "x-api-key": c.ckey,
+      "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: c.cmodel, max_tokens: 6000, temperature: 0,
+      messages: [{ role: "user", content: [
+        { type: "image", source: { type: "base64", media_type: "image/jpeg", data: b64 } },
+        { type: "text", text: prompt }] }]
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw httpErr(res, data, [429, 500, 502, 503, 529]);
+  return (data.content || []).map(x => x.text || "").join("");
+}
+async function callOpenAI(b64, prompt, c) {
+  await throttle("second", 3000);
+  const res = await fetch(c.burl.replace(/\/+$/, "") + "/chat/completions", {
+    method: "POST",
+    headers: { "Content-Type": "application/json", "Authorization": "Bearer " + c.bkey },
+    body: JSON.stringify({
+      model: c.bmodel, temperature: 0, max_tokens: 4000,
+      messages: [{ role: "user", content: [
+        { type: "text", text: prompt },
+        { type: "image_url", image_url: { url: "data:image/jpeg;base64," + b64 } }] }]
+    })
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw httpErr(res, data, [429, 500, 502, 503]);
+  return (((data.choices || [])[0] || {}).message || {}).content || "";
+}
+async function callReader(reader, b64, prompt, c) {
+  for (let a = 1; ; a++) {
+    try {
+      const text = reader === "second" ? await callOpenAI(b64, prompt, c)
+        : c.provider === "gemini" ? await callGemini(b64, prompt, c) : await callClaude(b64, prompt, c);
+      return parseJSON(text);
+    } catch (e) {
+      if (e instanceof TypeError || e instanceof SyntaxError) e.retry = true;
+      if (!e.retry || a >= 4) throw e;
+      await sleep(6000 * a);
     }
-  } catch (e) {}
+  }
 }
-
-function getCount(storeName) {
-  return new Promise((res) => {
-    if (!db) return res(0);
+function parseOut(out) {
+  const found = {};
+  for (const r of (out.rows || [])) if (r && r.name != null) {
+    const nums = Array.isArray(r.nums) ? r.nums.map(Number).filter(x => isFinite(x) && x >= 0) : [];
+    const reg = (r.reg === null || r.reg === undefined || r.reg === "" || !isFinite(Number(r.reg))) ? null : Number(r.reg);
+    found[String(r.name).trim().toLowerCase()] = { nums, reg };
+  }
+  return { sheet: out.sheet === "sheet2" ? "sheet2" : "sheet1", found };
+}
+const good = r => r && r.nums.length > 0 && r.reg != null && r.reg === sumN(r.nums);
+function pick(a, b) {
+  if (!a) return b; if (!b) return a;
+  if (good(a)) return a; if (good(b)) return b;
+  return b.nums.length > a.nums.length ? b : a;
+}
+function mergeParsed(list) {
+  const votes = {}; list.forEach(x => votes[x.sheet] = (votes[x.sheet] || 0) + 1);
+  const sheet = (votes.sheet2 || 0) > (votes.sheet1 || 0) ? "sheet2" : "sheet1";
+  const found = {};
+  for (const x of list) for (const k in x.found) found[k] = pick(found[k], x.found[k]);
+  return { sheet, found };
+}
+function finalize(m) {
+  const layout = (m.sheet === "sheet2" && names("s2").length) ? "sheet2" : "sheet1";
+  const rows = {}; let bad = 0, filled = 0;
+  for (const n of names(layout === "sheet2" ? "s2" : "s1")) {
+    const r = m.found[n.toLowerCase()] || { nums: [], reg: null };
+    rows[n] = { nums: r.nums.slice(), reg: r.reg };
+    if (r.nums.length || r.reg != null) filled++;
+    if (r.reg != null && r.reg !== sumN(r.nums)) bad++;
+  }
+  return { layout, rows, bad, filled };
+}
+const better = (a, b) => a.bad < b.bad || (a.bad === b.bad && a.filled > b.filled);
+async function readerRead(reader, p, c, strips) {
+  const spans = strips ? [[0, 0.4, "left"], [0.3, 0.7, "middle"], [0.6, 1, "right"]] : [[0, 1, ""]];
+  const parsed = [];
+  for (const [x0, x1, pos] of spans) {
+    const b64 = await prepImage(p.img, x0, x1);
+    const note = pos ? `This image shows only the ${pos} part of the page. Read ONLY columns whose header is fully visible here and return rows only for those columns. Skip columns cut off at the edges.` : "";
+    parsed.push(parseOut(await callReader(reader, b64, buildPrompt(note), c)));
+  }
+  return mergeParsed(parsed);
+}
+const sameRow = (x, y) => x.reg === y.reg && [...x.nums].sort((a, b) => a - b).join("+") === [...y.nums].sort((a, b) => a - b).join("+");
+async function readPage(p, c) {
+  let prim = finalize(await readerRead("main", p, c, c.precision));
+  if (prim.bad > 0 && !c.precision) {
+    const r2 = finalize(await readerRead("main", p, c, true));
+    if (better(r2, prim)) prim = r2;
+  }
+  p.note = "";
+  if (c.bkey && c.burl && c.bmodel) {
     try {
-      const req = db.transaction(storeName, "readonly").objectStore(storeName).count();
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => res(0);
-    } catch (e) { res(0); }
-  });
-}
-
-function getAllFromStore(storeName) {
-  return new Promise((res) => {
-    if (!db) return res([]);
-    try {
-      const req = db.transaction(storeName, "readonly").objectStore(storeName).getAll();
-      req.onsuccess = () => res(req.result || []);
-      req.onerror = () => res([]);
-    } catch (e) { res([]); }
-  });
-}
-
-function putRecord(storeName, record) {
-  return new Promise((res) => {
-    if (!db) return res();
-    try {
-      const req = db.transaction(storeName, "readwrite").objectStore(storeName).put(record);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => res();
-    } catch (e) { res(); }
-  });
-}
-
-function getRecord(storeName, key) {
-  return new Promise((res) => {
-    if (!db) return res(null);
-    try {
-      const req = db.transaction(storeName, "readonly").objectStore(storeName).get(key);
-      req.onsuccess = () => res(req.result);
-      req.onerror = () => res(null);
-    } catch (e) { res(null); }
-  });
-}
-
-function deleteRecord(storeName, key) {
-  return new Promise((res) => {
-    if (!db) return res();
-    try {
-      const req = db.transaction(storeName, "readwrite").objectStore(storeName).delete(key);
-      req.onsuccess = () => res();
-      req.onerror = () => res();
-    } catch (e) { res(); }
-  });
-}
-
-// Resize high-res phone photo to a lightweight JPEG
-function compressImage(file, maxDimension = 1600, quality = 0.85) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => {
-      const img = new Image();
-      img.onload = () => {
-        let w = img.width, h = img.height;
-        if (w > maxDimension || h > maxDimension) {
-          if (w > h) { h = Math.round((h * maxDimension) / w); w = maxDimension; }
-          else { w = Math.round((w * maxDimension) / h); h = maxDimension; }
+      let sec = finalize(await readerRead("second", p, c, c.precision));
+      if (sec.bad > 0 && !c.precision) {
+        const s2 = finalize(await readerRead("second", p, c, true));
+        if (better(s2, sec)) sec = s2;
+      }
+      if (sec.layout !== prim.layout) p.note = "The two readers disagree on the sheet type. Check the Sheet setting.";
+      else {
+        const useSec = sec.bad < prim.bad;
+        const A = useSec ? sec : prim, B = useSec ? prim : sec;
+        for (const n of Object.keys(A.rows)) {
+          const x = A.rows[n], y = B.rows[n];
+          if (y && !sameRow(x, y)) x.alt = { nums: y.nums, reg: y.reg };
         }
-        const canvas = document.createElement("canvas");
-        canvas.width = w; canvas.height = h;
-        canvas.getContext("2d").drawImage(img, 0, 0, w, h);
-        resolve(canvas.toDataURL("image/jpeg", quality));
-      };
-      img.onerror = () => reject(new Error("Image decode failed"));
-      img.src = e.target.result;
-    };
-    reader.onerror = () => reject(new Error("File read error"));
-    reader.readAsDataURL(file);
-  });
-}
-
-function readFileRaw(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = (e) => resolve(e.target.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
-let activeDate = "2026-02-10";
-let activeCalcId = "run_default";
-let activeRun = { calcId: "run_default", label: "Calculation Run 1", date: "2026-02-10" };
-let activePage = null;
-let currentRotation = 0;
-let currentZoom = 1.0;
-let currentImgElement = null;
-
-window.addEventListener("DOMContentLoaded", async () => {
-  await initIndexedDB();
-  const sb = document.getElementById("storageStatusBadge");
-  sb.innerText = db ? "Ready ✓" : "Ready (no DB)"; sb.style.background = db ? "#28a745" : "#ffc107";
-  document.getElementById("selectedDateInput").value = activeDate;
-  await ensureActiveRun();
-  await refreshDatePagesList();
-});
-
-function switchTab(screenId) {
-  document.querySelectorAll(".screen").forEach(s => s.classList.remove("active"));
-  document.querySelectorAll(".tab-btn").forEach(b => b.classList.remove("active"));
-  document.getElementById(screenId).classList.add("active");
-  const btn = Array.from(document.querySelectorAll(".tab-btn")).find(b => b.getAttribute("onclick").includes(screenId));
-  if (btn) btn.classList.add("active");
-
-  if (screenId === "screen-report") generateDailyReport();
-  if (screenId === "screen-master") renderMedicineMaster();
-  if (screenId === "screen-review" && activePage) loadPageForReview();
-}
-
-async function ensureActiveRun() {
-  activeDate = document.getElementById("selectedDateInput").value || "2026-02-10";
-  let allRuns = await getAllFromStore("runs");
-  if (!allRuns.length && window.MEMORY_RUNS.length) allRuns = window.MEMORY_RUNS;
-  let dateRuns = allRuns.filter(r => r.date === activeDate);
-
-  if (dateRuns.length === 0) {
-    const initialRun = { calcId: `run_${activeDate}_${Date.now()}`, date: activeDate, label: "Calculation Run 1" };
-    await putRecord("runs", initialRun);
-    upsertMemory(window.MEMORY_RUNS, "calcId", initialRun);
-    dateRuns = [initialRun];
+        prim = A;
+      }
+    } catch (e) { p.note = "Second reader failed: " + e.message; }
   }
+  p.layout = prim.layout; p.rows = prim.rows; p.status = "read";
+  await putPage(p);
+  return mism(p);
+}
+let running = false;
+$("btnAuto").onclick = async () => {
+  if (running) return;
+  const c = runCfg(); const key = c.provider === "gemini" ? c.gkey : c.ckey;
+  const msg = $("autoMsg");
+  if (!S.date) return alert("Pick the date first.");
+  if (!key) { alert("Add an API key in Settings (Gemini key is free)."); return showTab("settings"); }
+  if (!names("s1").length) { alert("Fill in the medicine names in Settings."); return showTab("settings"); }
+  let pages = await pagesOf(S.date);
+  if ($("skipRead").checked) pages = pages.filter(p => p.status !== "read" && p.status !== "verified");
+  else pages = pages.filter(p => p.status !== "verified");
+  if (!pages.length) { msg.style.color = "var(--muted)"; msg.textContent = "Nothing to read for this date."; return; }
+  running = true; $("btnAuto").disabled = true;
+  let ok = 0, fail = 0, flagged = 0, errs = [];
+  for (let i = 0; i < pages.length; i++) {
+    msg.style.color = "var(--primary)"; msg.textContent = `Reading page ${i + 1} of ${pages.length}...`;
+    try { flagged += await readPage(pages[i], c); ok++; }
+    catch (e) { fail++; errs.push(`Page ${i + 1}: ${e.message}`); }
+    await renderUpload();
+  }
+  running = false; $("btnAuto").disabled = false;
+  msg.style.color = fail || flagged ? "var(--bad)" : "var(--ok)";
+  msg.textContent = `Done: ${ok} read, ${fail} failed, ${flagged} row(s) to check (sum differs from register total, or the two readers disagree). Open Review or Totals to check red cells.` + (errs.length ? "\n" + errs.join("\n") : "");
+  render();
+};
 
-  const selector = document.getElementById("activeCalcSelector");
-  selector.innerHTML = "";
-  dateRuns.forEach(r => {
-    const opt = document.createElement("option");
-    opt.value = r.calcId;
-    opt.text = r.label;
-    selector.appendChild(opt);
+/* ---------- review ---------- */
+async function renderReview() {
+  const pages = S.date ? await pagesOf(S.date) : [];
+  const sel = $("pageSel");
+  sel.innerHTML = pages.map((p, i) => `<option value="${p.id}">Page ${i + 1} - ${p.layout === "sheet2" ? "Sheet 2" : "Sheet 1"} - ${p.status === "verified" ? "verified" : p.status === "read" ? mism(p) + " to check" : "new"}</option>`).join("");
+  if (!pages.length) { $("reviewBody").innerHTML = '<div class="card small">No pages for this date.</div>'; return; }
+  if (!pages.find(p => p.id === S.pid)) S.pid = pages[0].id;
+  sel.value = S.pid;
+  const p = pages.find(x => x.id === S.pid);
+  const list = listFor(p);
+  const body = list.map((n, i) => {
+    const r = rowOf(p, n), s = sumN(r.nums);
+    const bad = r.reg != null && r.reg !== s;
+    return `<tr>
+      <td>${esc(n)}${r.alt ? `<div class="alt" id="alt${i}">2nd reader: ${esc(r.alt.nums.join("+"))} / ${r.alt.reg == null ? "-" : r.alt.reg} <button class="btn btn-o btn-sm" data-adopt="${i}">use</button></div>` : ""}</td>
+      <td><input data-n="${i}" data-f="nums" inputmode="text" value="${esc(r.nums.join("+"))}" placeholder="15+30+5"></td>
+      <td id="sum${i}" style="${bad ? "color:var(--bad);font-weight:700" : ""}">${r.nums.length ? s : ""}</td>
+      <td><input data-n="${i}" data-f="reg" inputmode="decimal" value="${r.reg == null ? "" : r.reg}" style="min-width:70px"></td>
+      <td id="st${i}">${r.reg == null ? (r.nums.length ? "&#9888;" : "") : bad ? "&#10060;" : "&#9989;"}</td></tr>`;
+  }).join("");
+  $("reviewBody").innerHTML = `
+    <div class="card"><img class="preview" id="pv" src="${p.img}" alt=""><div class="small">Tap the image to open it full size.</div></div>
+    <div class="card tw"><div class="card-title">Numbers on this page ${statusTag(p)}</div>${p.note ? `<div class="msg" style="color:var(--bad)">${esc(p.note)}</div>` : ""}
+      <table class="rv"><tr><th>Medicine</th><th>Numbers (use +)</th><th>Sum</th><th>Register total</th><th></th></tr>${body}</table>
+      <button class="btn btn-ok btn-b" id="btnVer">${p.status === "verified" ? "Verified - tap to unlock" : "Mark page as verified"}</button>
+      <button class="btn btn-o btn-b" id="btnReread">Re-read this page with AI</button>
+      <div class="msg" id="rvMsg"></div></div>`;
+  $("pv").onclick = () => { const w = window.open(); if (w) w.document.write(`<body style="margin:0"><img src="${p.img}" style="width:200%;max-width:none">`); };
+  $("reviewBody").oninput = e => {
+    if (!e.target.dataset.n) return;
+    const i = +e.target.dataset.n, n = list[i];
+    const row = p.rows[n] || (p.rows[n] = { nums: [], reg: null });
+    if (e.target.dataset.f === "nums") row.nums = parseNums(e.target.value);
+    else { const v = e.target.value.trim(); row.reg = v === "" || !isFinite(Number(v)) ? null : Number(v); }
+    const s = sumN(row.nums), bad = row.reg != null && row.reg !== s;
+    $("sum" + i).textContent = row.nums.length ? s : "";
+    $("sum" + i).style.cssText = bad ? "color:var(--bad);font-weight:700" : "";
+    $("st" + i).innerHTML = row.reg == null ? (row.nums.length ? "&#9888;" : "") : bad ? "&#10060;" : "&#9989;";
+    row.alt = null; const al = $("alt" + i); if (al) al.remove();
+    if (p.status === "new") p.status = "read";
+    clearTimeout(renderReview.t); renderReview.t = setTimeout(() => putPage(p), 400);
+  };
+  $("reviewBody").onclick = async e => {
+    const b = e.target.closest("[data-adopt]"); if (!b) return;
+    const row = p.rows[list[+b.dataset.adopt]];
+    if (row && row.alt) { row.nums = row.alt.nums; row.reg = row.alt.reg; row.alt = null; await putPage(p); renderReview(); }
+  };
+  $("btnVer").onclick = async () => { p.status = p.status === "verified" ? "read" : "verified"; await putPage(p); render(); };
+  $("btnReread").onclick = async () => {
+    const c = runCfg(); const key = c.provider === "gemini" ? c.gkey : c.ckey;
+    if (!key) { alert("Add an API key in Settings."); return; }
+    if (!confirm("Replace this page's numbers with a fresh AI reading?")) return;
+    $("rvMsg").textContent = "Reading...";
+    try { const b = await readPage(p, c); await render(); $("rvMsg").textContent = b ? `${b} row(s) still differ.` : "All rows match."; }
+    catch (e) { $("rvMsg").style.color = "var(--bad)"; $("rvMsg").textContent = e.message; }
+  };
+}
+$("pageSel").onchange = () => { S.pid = $("pageSel").value; renderReview(); };
+async function stepPage(d) {
+  const pages = await pagesOf(S.date); const i = pages.findIndex(p => p.id === S.pid);
+  const n = pages[i + d]; if (n) { S.pid = n.id; renderReview(); scrollTo(0, 0); }
+}
+$("prevP").onclick = () => stepPage(-1); $("nextP").onclick = () => stepPage(1);
+async function rotCur(deg) {
+  const p = (await allPages()).find(x => x.id === S.pid); if (!p) return;
+  p.img = await rotateData(p.img, deg); await putPage(p); renderReview();
+}
+$("rotL").onclick = () => rotCur(270); $("rotR").onclick = () => rotCur(90);
+
+/* ---------- totals ---------- */
+async function buildTotals() {
+  const pages = S.date ? await pagesOf(S.date) : [];
+  const order = []; const seen = new Set();
+  const add = n => { const k = n.toLowerCase(); if (!seen.has(k)) { seen.add(k); order.push(n); } };
+  names("s1").forEach(add); names("s2").forEach(add);
+  pages.forEach(p => Object.keys(p.rows || {}).forEach(add));
+  const used = order.filter(n => pages.some(p => (p.rows && Object.keys(p.rows).some(k => k.toLowerCase() === n.toLowerCase()))));
+  const drugs = used.map(n => {
+    const per = pages.map(p => {
+      const key = Object.keys(p.rows || {}).find(k => k.toLowerCase() === n.toLowerCase());
+      if (!key) return null;
+      const r = p.rows[key]; return { counted: sumN(r.nums), reg: r.reg, has: r.nums.length > 0, alt: !!r.alt };
+    });
+    const counted = per.reduce((a, x) => a + (x ? x.counted : 0), 0);
+    const reg = per.reduce((a, x) => a + (x && x.reg != null ? x.reg : 0), 0);
+    const missingReg = per.some(x => x && x.has && x.reg == null);
+    return { name: n, per, counted, reg, missingReg };
   });
-
-  // FIX: keep the currently selected run if it belongs to this date
-  const keep = dateRuns.find(r => r.calcId === activeCalcId) || dateRuns[0];
-  activeCalcId = keep.calcId;
-  activeRun = keep;
-  selector.value = activeCalcId;
-  document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
+  return { pages, drugs };
 }
-
-async function onDateChanged() {
-  await ensureActiveRun();
-  await refreshDatePagesList();
-}
-
-async function onCalculationRunChanged() {
-  activeCalcId = document.getElementById("activeCalcSelector").value;
-  activeRun = await getRecord("runs", activeCalcId);
-  if (!activeRun) activeRun = window.MEMORY_RUNS.find(r => r.calcId === activeCalcId);
-  if (activeRun) document.getElementById("uploadTargetRunLabel").innerText = activeRun.label;
-  await refreshDatePagesList();
-}
-
-async function promptNewCalculationRun() {
-  const name = prompt(`Enter name for new calculation on ${activeDate}:`, "Shift 2");
-  if (!name || !name.trim()) return;
-  const newRun = { calcId: `run_${activeDate}_${Date.now()}`, date: activeDate, label: name.trim() };
-  await putRecord("runs", newRun);
-  upsertMemory(window.MEMORY_RUNS, "calcId", newRun);
-  activeCalcId = newRun.calcId;   // select the new run before refreshing the list
-  await ensureActiveRun();
-  await onCalculationRunChanged();
-}
-
-async function renameCurrentRun() {
-  if (!activeRun) return;
-  const newName = prompt("Rename this calculation run:", activeRun.label);
-  if (!newName || !newName.trim()) return;
-  activeRun.label = newName.trim();
-  await putRecord("runs", activeRun);
-  upsertMemory(window.MEMORY_RUNS, "calcId", activeRun);
-  await ensureActiveRun();
-}
-
-function onFileSelectionChanged() {
-  const count = (document.getElementById("batchImageInput").files || []).length;
-  const btn = document.getElementById("btnProcessPhotos");
-  if (count > 0) {
-    btn.innerText = `Loading ${count} photos...`;
-    btn.style.background = "#28a745";
-    processSelectedFiles();
-  } else {
-    btn.innerText = "Load Selected Photos";
-    btn.style.background = "#005a9c";
+async function renderTotals() {
+  $("totDate").textContent = S.date || "-";
+  const { pages, drugs } = await buildTotals();
+  if (!pages.length) { $("totTable").innerHTML = '<div class="small">No pages for this date.</div>'; $("totStatus").textContent = ""; return; }
+  const unver = pages.filter(p => p.status !== "verified").length;
+  const mm = pages.reduce((a, p) => a + mism(p), 0);
+  $("totStatus").style.color = (unver || mm) ? "var(--bad)" : "var(--ok)";
+  $("totStatus").textContent = `${pages.length} page(s), ${pages.length - unver} verified, ${mm} row(s) to check.` + (unver ? " Verify every page before using these totals." : " All pages verified.");
+  let h = "<table><tr><th>Medicine</th>" + pages.map((p, i) => `<th>P${i + 1}</th>`).join("") + "<th>Day counted</th><th>Day register</th><th>Diff</th></tr>";
+  for (const d of drugs) {
+    h += `<tr><td>${esc(d.name)}</td>`;
+    d.per.forEach(x => {
+      if (!x) { h += "<td>-</td>"; return; }
+      const bad = x.reg != null && x.reg !== x.counted;
+      const nr = (x.reg == null && x.has) || x.alt;
+      h += `<td class="${bad ? "bad" : nr ? "warn" : ""}" title="${bad ? "register says " + x.reg : nr ? (x.alt ? "readers disagree" : "no register total") : ""}">${x.has || x.reg != null ? x.counted : ""}${bad ? " (" + x.reg + ")" : ""}${x.alt ? " ?" : ""}</td>`;
+    });
+    const diff = d.counted - d.reg;
+    h += `<td class="tot">${d.counted}</td><td class="tot">${d.reg}${d.missingReg ? " &#9888;" : ""}</td><td class="${diff ? "bad" : "tot"}">${diff}</td></tr>`;
   }
+  $("totTable").innerHTML = h + "</table>";
+}
+$("btnPrint").onclick = () => window.print();
+$("btnCsv").onclick = async () => {
+  const { pages, drugs } = await buildTotals();
+  if (!pages.length) return;
+  const q = v => '"' + String(v).replace(/"/g, '""') + '"';
+  const lines = ["Date,Medicine,Page,Counted,Register,Match"];
+  for (const d of drugs) {
+    d.per.forEach((x, i) => { if (x) lines.push([S.date, q(d.name), i + 1, x.counted, x.reg == null ? "" : x.reg, x.reg == null ? "" : x.reg === x.counted ? "yes" : "NO"].join(",")); });
+    lines.push([S.date, q(d.name), "DAY TOTAL", d.counted, d.reg, d.counted === d.reg ? "yes" : "NO"].join(","));
+  }
+  download(new Blob(["\ufeff" + lines.join("\n")], { type: "text/csv" }), `ledger-${S.date}.csv`);
+};
+function download(blob, name) {
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = name;
+  document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 5000);
 }
 
-let uploading = false;
-async function processSelectedFiles() {
-  if (uploading) return;
-  const input = document.getElementById("batchImageInput");
-  const files = Array.from(input.files || []);
-  const prog = document.getElementById("uploadProgress");
-
-  if (!files.length) {
-    alert("Please tap 'Choose Files' and select your register photos first.");
-    return;
-  }
-
-  uploading = true;
-  let undecodable = 0;
-  prog.innerHTML = `<span style="color:#005a9c;">Preparing to load ${files.length} photos...</span>`;
-
+/* ---------- settings / backup ---------- */
+function loadCfgUI() {
+  const c = cfg();
+  ["provider", "gkey", "gmodel", "ckey", "cmodel", "burl", "bkey", "bmodel", "s1", "s2"].forEach(k => $(k).value = c[k]);
+}
+$("saveCfg").onclick = () => {
+  const c = {}; ["provider", "gkey", "gmodel", "ckey", "cmodel", "burl", "bkey", "bmodel", "s1", "s2"].forEach(k => c[k] = $(k).value.trim());
+  c.s1 = $("s1").value; c.s2 = $("s2").value;
+  saveCfgObj(c);
+  $("cfgMsg").style.color = "var(--ok)"; $("cfgMsg").textContent = "Saved.";
+  setTimeout(() => $("cfgMsg").textContent = "", 2500);
+};
+$("btnBackup").onclick = async () => {
+  const c = cfg(); c.gkey = ""; c.ckey = ""; c.bkey = "";
+  download(new Blob([JSON.stringify({ v: 1, cfg: c, pages: await allPages() })], { type: "application/json" }), `ledger-backup-${new Date().toISOString().slice(0, 10)}.json`);
+};
+$("restoreFile").onchange = async e => {
+  const f = e.target.files[0]; if (!f) return;
   try {
-    await ensureActiveRun();
+    const d = JSON.parse(await f.text());
+    if (!Array.isArray(d.pages)) throw new Error("Not a ledger backup");
+    for (const p of d.pages) await putPage(p);
+    if (d.cfg) { const c = cfg(); d.cfg.gkey = c.gkey; d.cfg.ckey = c.ckey; d.cfg.bkey = c.bkey; saveCfgObj(d.cfg); loadCfgUI(); }
+    alert(`Restored ${d.pages.length} page(s).`); render();
+  } catch (err) { alert("Restore failed: " + err.message); }
+  e.target.value = "";
+};
+$("btnWipeDate").onclick = async () => {
+  if (!S.date) return alert("Pick a date on tab 1.");
+  const pages = await pagesOf(S.date);
+  if (pages.length && confirm(`Delete all ${pages.length} page(s) of ${S.date}? Download a backup first.`)) { for (const p of pages) await delPage(p.id); render(); }
+};
 
-    for (let i = 0; i < files.length; i++) {
-      prog.innerHTML = `<span style="color:#005a9c;">Processing photo ${i + 1} of ${files.length} (${files[i].name})...</span>`;
-
-      let dataUrl = "";
-      try { dataUrl = await compressImage(files[i]); }
-      catch (err) { undecodable++; dataUrl = await readFileRaw(files[i]); }
-
-      const pageRecord = {
-        id: `page_${activeCalcId}_${Date.now()}_${i}`,
-        calcId: activeCalcId,
-        date: activeDate,
-        filename: files[i].name,
-        pageNumber: i + 1,
-        layout: (i % 2 === 0) ? "sheet1" : "sheet2",
-        imageData: dataUrl,
-        verified: false,
-        rotation: 0
-      };
-
-      await putRecord("pages", pageRecord);
-      upsertMemory(window.MEMORY_PAGES, "id", pageRecord);
-    }
-
-    prog.innerHTML = `<span style="color:var(--success);">Successfully loaded ${files.length} photos! See list below.</span>` +
-      (undecodable ? `<br><span style="color:#dc3545;">${undecodable} photo(s) could not be decoded (HEIC/unsupported format?). Re-take as JPEG.</span>` : "");
-    input.value = "";
-    onFileSelectionChanged();
-    await refreshDatePagesList();
-  } catch (err) {
-    prog.innerHTML = `<span style="color:var(--danger);">Upload error: ${err.message}</span>`;
-  } finally {
-    uploading = false;
-    onFileSelectionChanged();
-  }
-}
-
-async function refreshDatePagesList() {
-  await ensureActiveRun();
-  let allPages = await getAllFromStore("pages");
-  if (!allPages.length && window.MEMORY_PAGES.length) allPages = window.MEMORY_PAGES;
-
-  const pages = allPages.filter(p => p.calcId === activeCalcId);
-  const container = document.getElementById("datePagesList");
-  const selector = document.getElementById("reviewPageSelector");
-
-  selector.innerHTML = '<option value="">Select a page to review...</option>';
-  if (!pages.length) {
-    container.innerHTML = `<span style="color:var(--text-muted); font-size:0.85rem;">No pages uploaded yet for this run.</span>`;
-    return;
-  }
-
-  let html = `<div style="display:flex; flex-direction:column; gap:6px;">`;
-  pages.forEach((p, idx) => {
-    const opt = document.createElement("option");
-    opt.value = p.id;
-    opt.text = `Page #${p.pageNumber || idx + 1} (${p.layout === 'sheet1' ? 'Sheet 1: 1-40' : 'Sheet 2: 41-88'}) - ${p.verified ? 'Verified' : 'Pending'}`;
-    selector.appendChild(opt);
-
-    html += `
-      <div style="display:flex; justify-content:space-between; align-items:center; padding:8px 10px; background:#f8f9fa; border:1px solid #dee2e6; border-radius:4px; font-size:0.85rem;">
-        <div><strong>Page ${p.pageNumber || idx + 1}:</strong> ${p.filename} <span class="status-pill ${p.verified ? 'pill-verified' : 'pill-partial'}">${p.verified ? 'Verified' : 'Pending'}</span></div>
-        <button class="btn btn-primary btn-sm" onclick="selectPageForReview('${p.id}')">Open &amp; Enter</button>
-      </div>`;
-  });
-  html += `</div>`;
-  container.innerHTML = html;
-}
-
-async function selectPageForReview(pageId) {
-  document.getElementById("reviewPageSelector").value = pageId;
-  switchTab("screen-review");
-  await loadPageForReview();
-}
-
-async function loadPageForReview() {
-  const pageId = document.getElementById("reviewPageSelector").value;
-  if (!pageId) return;
-  activePage = await getRecord("pages", pageId);
-  if (!activePage) activePage = window.MEMORY_PAGES.find(p => p.id === pageId);
-  if (!activePage) return;
-
-  document.getElementById("pageLayoutType").value = activePage.layout || "sheet1";
-  document.getElementById("reviewPageNumber").value = activePage.pageNumber || "";
-  currentRotation = activePage.rotation || 0;
-  currentZoom = 1.0;
-
-  if (activePage.imageData) {
-    currentImgElement = new Image();
-    currentImgElement.onload = drawCanvas;
-    currentImgElement.src = activePage.imageData;
-  } else {
-    currentImgElement = null;
-    drawCanvas();
-  }
-  await renderEntryGrid();
-  await loadQuick();
-}
-
-function rotateImage(deg) {
-  currentRotation = (currentRotation + deg) % 360;
-  if (currentRotation < 0) currentRotation += 360;
-  if (activePage) {
-    activePage.rotation = currentRotation;
-    putRecord("pages", activePage);
-  }
-  drawCanvas();
-}
-
-function zoomImage(factor) {
-  currentZoom = Math.min(6.0, Math.max(1.0, currentZoom * factor));
-  drawCanvas();
-}
-
-function resetImageTransform() {
-  currentRotation = 0; currentZoom = 1.0; drawCanvas();
-}
-
-function drawCanvas() {
-  const canvas = document.getElementById("imageCanvas");
-  const ctx = canvas.getContext("2d");
-
-  if (!currentImgElement) {
-    canvas.width = 300; canvas.height = 120;
-    canvas.style.width = "300px"; canvas.style.height = "auto";
-    ctx.fillStyle = "#2c3e50"; ctx.fillRect(0, 0, canvas.width, canvas.height);
-    ctx.fillStyle = "#ffffff"; ctx.font = "12px sans-serif"; ctx.textAlign = "center";
-    ctx.fillText("No photo (purged or not selected).", canvas.width / 2, 55);
-    ctx.fillText("Saved numbers remain.", canvas.width / 2, 75);
-    return;
-  }
-
-  const is90or270 = (currentRotation === 90 || currentRotation === 270);
-  const w = is90or270 ? currentImgElement.height : currentImgElement.width;
-  const h = is90or270 ? currentImgElement.width : currentImgElement.height;
-  canvas.width = w; canvas.height = h;
-
-  // zoom 1 = fit to width; larger zoom scrolls inside the viewer
-  const base = Math.max(200, canvas.parentElement.clientWidth - 12);
-  canvas.style.width = (base * currentZoom) + "px";
-  canvas.style.height = "auto";
-
-  ctx.save();
-  ctx.translate(w / 2, h / 2);
-  ctx.rotate((currentRotation * Math.PI) / 180);
-  ctx.drawImage(currentImgElement, -currentImgElement.width / 2, -currentImgElement.height / 2);
-  ctx.restore();
-}
-
-function parseExpr(raw) {
-  const nums = String(raw).split(/[^0-9]+/).filter(Boolean).map(Number);
-  return { nums, total: nums.reduce((a, b) => a + b, 0) };
-}
-
-async function getLayoutMeds() {
-  const layout = (activePage && activePage.layout) || "sheet1";
-  let all = await getAllFromStore("medicines");
-  if (!all.length) all = DEFAULT_IRC_MEDICINES;
-  return all.filter(m => m.sheet === layout);
-}
-
-async function pageEntryMap() {
-  let all = await getAllFromStore("entries");
-  if (!all.length && window.MEMORY_ENTRIES.length) all = window.MEMORY_ENTRIES;
-  const map = {};
-  if (activePage) all.filter(e => e.pageId === activePage.id).forEach(e => { map[e.medId] = e; });
-  return map;
-}
-
-function checkHtml(qty, reg) {
-  if (reg === null || reg === undefined || String(reg).trim() === "") return "";
-  const r = parseInt(reg, 10);
-  if (isNaN(r)) return "";
-  return r === qty
-    ? `<span style="color:#28a745; font-weight:700;">&#10003; matches register</span>`
-    : `<span class="warn">&#9888; register says ${r} (differs by ${Math.abs(r - qty)})</span>`;
-}
-
-async function saveEntryFor(medId, raw, reg) {
-  const { total } = parseExpr(raw);
-  const r = String(reg === undefined ? "" : reg).trim();
-  const entry = {
-    key: `${activePage.id}_med_${medId}`,
-    pageId: activePage.id,
-    calcId: activePage.calcId,
-    date: activePage.date || activeDate,
-    medId: medId,
-    quantity: total,
-    expr: raw.trim(),
-    regTotal: r === "" ? null : (parseInt(r, 10) || 0),
-    verified: true,
-    rowsRange: "grid",
-    updated: Date.now()
-  };
-  await putRecord("entries", entry);
-  upsertMemory(window.MEMORY_ENTRIES, "key", entry);
-}
-
-async function updateProgress() {
-  const meds = await getLayoutMeds();
-  const map = await pageEntryMap();
-  const n = meds.filter(m => map[m.id]).length;
-  document.getElementById("entryProgressBadge").innerText = `${n} / ${meds.length} entered`;
-  return { meds, map, missing: meds.length - n };
-}
-
-async function markPageComplete() {
-  if (!activePage) return alert("Open a page first.");
-  const { meds, map, missing } = await updateProgress();
-  let bad = 0;
-  meds.forEach(m => { const e = map[m.id]; if (e && e.regTotal !== null && e.regTotal !== undefined && e.regTotal !== e.quantity) bad++; });
-  const warn = [];
-  if (missing) warn.push(`${missing} medicine(s) have no entry (blank)`);
-  if (bad) warn.push(`${bad} medicine(s) differ from the register total`);
-  if (warn.length && !confirm(warn.join(" and ") + ". Mark this page complete anyway?")) return;
-  activePage.verified = true;
-  await putRecord("pages", activePage);
-  upsertMemory(window.MEMORY_PAGES, "id", activePage);
-  document.getElementById("extractMsg").innerText = warn.length ? `Page marked complete (${warn.join("; ")}).` : "Page marked complete. All checks passed.";
-  await refreshDatePagesList();
-}
-
-// ---------- Quick entry (one medicine at a time) ----------
-let quickMeds = [];
-let quickIndex = 0;
-
-async function loadQuick() {
-  if (!activePage) return;
-  quickMeds = await getLayoutMeds();
-  const map = await pageEntryMap();
-  const first = quickMeds.findIndex(m => !map[m.id]);
-  quickIndex = first < 0 ? 0 : first;
-  await showQuick();
-}
-
-async function showQuick() {
-  if (!quickMeds.length) return;
-  const m = quickMeds[quickIndex];
-  const map = await pageEntryMap();
-  const e = map[m.id];
-  const input = document.getElementById("quickInput");
-  document.getElementById("quickCounter").innerText = `${quickIndex + 1} / ${quickMeds.length}`;
-  document.getElementById("quickMedName").innerText = `${m.col}. ${m.name}`;
-  input.value = e ? ((e.expr !== undefined && e.expr !== "") ? e.expr : String(e.quantity)) : "";
-  document.getElementById("quickReg").value = (e && e.regTotal !== null && e.regTotal !== undefined) ? e.regTotal : "";
-  const st = document.getElementById("quickStatus");
-  st.innerText = e ? "Saved" : "Not entered";
-  st.style.color = e ? "var(--success)" : "var(--text-muted)";
-  updateQuickSum();
-  await updateProgress();
-  if (document.getElementById("entryMode").value === "quick") input.focus();
-}
-
-function updateQuickSum() {
-  const raw = document.getElementById("quickInput").value;
-  const reg = document.getElementById("quickReg").value.trim();
-  const el = document.getElementById("quickSum");
-  const { nums, total } = parseExpr(raw);
-  if (!raw.trim()) { el.innerHTML = ""; }
-  else {
-    const big = nums.some(n => n >= 1000);
-    el.innerHTML = `${nums.length} entr${nums.length === 1 ? "y" : "ies"} &rarr; total <strong>${total}</strong>` +
-      (big ? ` <span class="warn">&#9888; large number, check</span>` : "");
-  }
-  document.getElementById("quickCheck").innerHTML = (raw.trim() || reg) ? checkHtml(total, reg) : "";
-}
-
-function quickInsertPlus() {
-  const input = document.getElementById("quickInput");
-  input.value = input.value.replace(/\+?\s*$/, "") + "+";
-  input.focus();
-  updateQuickSum();
-}
-
-function quickKey(e) {
-  if (e.key === "Enter") { e.preventDefault(); quickNext(1); }
-}
-
-async function quickNext(delta) {
-  if (!activePage || !quickMeds.length) return;
-  const raw = document.getElementById("quickInput").value;
-  const reg = document.getElementById("quickReg").value;
-  if (raw.trim() !== "" || reg.trim() !== "") await saveEntryFor(quickMeds[quickIndex].id, raw, reg);
-  const next = quickIndex + delta;
-  if (next >= quickMeds.length) {
-    await showQuick();
-    document.getElementById("quickStatus").innerText = "Last medicine - tap Mark Complete";
-    return;
-  }
-  quickIndex = Math.max(0, next);
-  await showQuick();
-}
-
-// ---------- Full list ----------
-function rowInfoHtml(e) {
-  if (!e) return "";
-  const isSum = /\D/.test(String(e.expr || ""));
-  return (isSum ? `= ${e.quantity} &nbsp;` : "") + checkHtml(e.quantity, e.regTotal);
-}
-
-async function renderEntryGrid() {
-  if (!activePage) return;
-  const meds = await getLayoutMeds();
-  const map = await pageEntryMap();
-  let html = "";
-  meds.forEach(m => {
-    const e = map[m.id];
-    const val = e ? ((e.expr !== undefined && e.expr !== "") ? e.expr : e.quantity) : "";
-    const reg = (e && e.regTotal !== null && e.regTotal !== undefined) ? e.regTotal : "";
-    html += `
-      <div class="med-row">
-        <div class="med-header">
-          <div class="med-name">${m.col}. ${m.name}${m.custom ? " <em>(extra)</em>" : ""}</div>
-          <input type="text" inputmode="tel" class="qty-input" id="qty_input_${m.id}" value="${val}" placeholder="count" onchange="onManualQtyChanged(${m.id})">
-          <input type="text" inputmode="numeric" class="qty-input" id="reg_input_${m.id}" value="${reg}" placeholder="reg" style="width:62px; border-color:#999;" onchange="onManualQtyChanged(${m.id})">
-        </div>
-        <div id="sum_${m.id}" style="font-size:0.75rem; text-align:right; min-height:1em; color:var(--text-muted);">${rowInfoHtml(e)}</div>
-      </div>`;
-  });
-  document.getElementById("medEntryList").innerHTML = html;
-  await updateProgress();
-}
-
-async function onManualQtyChanged(medId) {
-  if (!activePage) return;
-  const raw = document.getElementById(`qty_input_${medId}`).value;
-  const reg = document.getElementById(`reg_input_${medId}`).value;
-  if (raw.trim() === "" && reg.trim() === "") return;
-  await saveEntryFor(medId, raw, reg);
-  const map = await pageEntryMap();
-  const sp = document.getElementById(`sum_${medId}`);
-  if (sp) sp.innerHTML = rowInfoHtml(map[medId]);
-  await updateProgress();
-}
-
-async function addExtraMedicine() {
-  if (!activePage) return alert("Open a page first.");
-  const name = prompt("Handwritten extra medicine name (e.g. Ivermectin 6mg):");
-  if (!name || !name.trim()) return;
-  let meds = await getAllFromStore("medicines");
-  if (!meds.length) meds = DEFAULT_IRC_MEDICINES;
-  const layout = activePage.layout || "sheet1";
-  let m = meds.find(x => x.sheet === layout && x.name.toLowerCase() === name.trim().toLowerCase());
-  if (!m) {
-    const nextId = Math.max(200, ...meds.map(x => x.id)) + 1;
-    m = { id: nextId, name: name.trim(), sheet: layout, col: meds.filter(x => x.sheet === layout).length + 1, custom: true };
-    await putRecord("medicines", m);
-    if (!DEFAULT_IRC_MEDICINES.find(x => x.id === m.id)) DEFAULT_IRC_MEDICINES.push(m);
-  }
-  await renderEntryGrid();
-  await loadQuick();
-  const i = quickMeds.findIndex(x => x.id === m.id);
-  if (i >= 0) { quickIndex = i; await showQuick(); }
-}
-
-async function onEntryModeChanged() {
-  const quick = document.getElementById("entryMode").value === "quick";
-  document.getElementById("quickCard").style.display = quick ? "block" : "none";
-  document.getElementById("listCard").style.display = quick ? "none" : "block";
-  if (quick) await loadQuick(); else await renderEntryGrid();
-}
-
-async function onLayoutChanged() {
-  if (!activePage) return;
-  activePage.layout = document.getElementById("pageLayoutType").value;
-  await putRecord("pages", activePage);
-  upsertMemory(window.MEMORY_PAGES, "id", activePage);
-  await renderEntryGrid();
-  await loadQuick();
-}
-
-async function updatePageMetadata() {
-  if (!activePage) return;
-  activePage.pageNumber = parseInt(document.getElementById("reviewPageNumber").value, 10) || 1;
-  await putRecord("pages", activePage);
-  upsertMemory(window.MEMORY_PAGES, "id", activePage);
-  await refreshDatePagesList();
-}
-
-async function deleteActivePage() {
-  if (!activePage) return;
-  if (!confirm("Delete this page?")) return;
-  const id = activePage.id;
-  await deleteRecord("pages", id);
-  // remove this page's entries too, so totals stay correct
-  const allEntries = await getAllFromStore("entries");
-  for (const e of allEntries.filter(e => e.pageId === id)) await deleteRecord("entries", e.key);
-  window.MEMORY_PAGES = window.MEMORY_PAGES.filter(p => p.id !== id);
-  window.MEMORY_ENTRIES = window.MEMORY_ENTRIES.filter(e => e.pageId !== id);
-  alert("Page deleted.");
-  activePage = null;
-  currentImgElement = null;
-  drawCanvas();
-  await refreshDatePagesList();
-  switchTab("screen-workspace");
-}
-
-function aggregateEntries(entries, medicines) {
-  const agg = {};
-  medicines.forEach(m => { agg[m.id] = { total: 0, reg: 0, regN: 0, n: 0, pages: new Set() }; });
-  entries.forEach(e => {
-    const a = agg[e.medId];
-    if (!a) return;
-    a.total += parseInt(e.quantity, 10) || 0;
-    a.n++;
-    a.pages.add(e.pageId);
-    if (e.regTotal !== null && e.regTotal !== undefined) { a.reg += e.regTotal; a.regN++; }
-  });
-  return agg;
-}
-
-function statusOf(a) {
-  if (!a.n) return { text: "No data", cls: "pill-partial", bad: false };
-  if (a.regN < a.n) return { text: "No register total", cls: "pill-partial", bad: false };
-  if (a.reg === a.total) return { text: "&#10003; Match", cls: "pill-verified", bad: false };
-  return { text: `&#9888; Differs by ${Math.abs(a.reg - a.total)}`, cls: "pill-bad", bad: true };
-}
-
-async function generateDailyReport() {
-  const scope = document.getElementById("reportScopeSelector").value;
-  document.getElementById("repDateTag").innerText = activeDate;
-
-  let allPages = await getAllFromStore("pages");
-  if (!allPages.length) allPages = window.MEMORY_PAGES;
-  let allEntries = await getAllFromStore("entries");
-  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
-  let medicines = await getAllFromStore("medicines");
-  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
-
-  let pages, entries;
-  if (scope === "activeRun") {
-    document.getElementById("repRunTag").innerText = activeRun ? activeRun.label : "Active Run";
-    pages = allPages.filter(p => p.calcId === activeCalcId);
-    entries = allEntries.filter(e => e.calcId === activeCalcId);
-  } else {
-    document.getElementById("repRunTag").innerText = "ALL RUNS COMBINED (Grand Daily Total)";
-    pages = allPages.filter(p => p.date === activeDate);
-    entries = allEntries.filter(e => e.date === activeDate);
-  }
-
-  document.getElementById("repPagesCount").innerText = `${pages.length} pages`;
-  const allVerified = pages.length > 0 && pages.every(p => p.verified);
-  const agg = aggregateEntries(entries, medicines);
-  let mismatches = 0;
-
-  let tbodyHtml = "";
-  medicines.forEach((m, idx) => {
-    const a = agg[m.id];
-    const st = statusOf(a);
-    if (st.bad) mismatches++;
-    tbodyHtml += `
-      <tr>
-        <td>${idx + 1}</td>
-        <td><strong>${m.name}</strong>${m.custom ? " <em>(extra)</em>" : ""}</td>
-        <td class="num-cell">${a.total}</td>
-        <td class="num-cell">${a.regN ? a.reg : "-"}</td>
-        <td><span class="status-pill ${st.cls}">${st.text}</span></td>
-        <td style="font-size:0.75rem; color:var(--text-muted);">${a.pages.size}</td>
-      </tr>`;
-  });
-  document.getElementById("dailyReportTbody").innerHTML = tbodyHtml;
-
-  const badge = document.getElementById("repCompletenessBadge");
-  if (mismatches) { badge.innerText = `${mismatches} MISMATCH(ES) - CHECK`; badge.className = "status-pill pill-bad"; }
-  else if (allVerified) { badge.innerText = "VERIFIED"; badge.className = "status-pill pill-verified"; }
-  else { badge.innerText = "PARTIAL"; badge.className = "status-pill pill-partial"; }
-}
-
-async function exportReportCSV() {
-  const scope = document.getElementById("reportScopeSelector").value;
-  let medicines = await getAllFromStore("medicines");
-  if (!medicines.length) medicines = DEFAULT_IRC_MEDICINES;
-  let allEntries = await getAllFromStore("entries");
-  if (!allEntries.length) allEntries = window.MEMORY_ENTRIES;
-  const entries = (scope === "activeRun") ? allEntries.filter(e => e.calcId === activeCalcId) : allEntries.filter(e => e.date === activeDate);
-  const agg = aggregateEntries(entries, medicines);
-  let csv = "Index,Medicine Name,Date,Counted Total,Register Total,Check\n";
-  medicines.forEach((m, i) => {
-    const a = agg[m.id], st = statusOf(a);
-    const chk = st.text.replace(/&#10003;/g, "OK").replace(/&#9888;/g, "!");
-    csv += `${i + 1},"${m.name.replace(/"/g, '""')}",${activeDate},${a.total},${a.regN ? a.reg : ""},${chk}\n`;
-  });
-  downloadBlob(csv, `consumption_${activeDate}.csv`, "text/csv;charset=utf-8;");
-}
-
-function exportReportHTML() {
-  const content = document.getElementById("screen-report").innerHTML;
-  const doc = `<!DOCTYPE html><html><head><meta charset="utf-8"><title>Report ${activeDate}</title><style>body{font-family:sans-serif;padding:20px;}table{width:100%;border-collapse:collapse;}th,td{border:1px solid #ccc;padding:6px;font-size:12px;}.num-cell{text-align:right;font-weight:bold;}.no-print{display:none;}</style></head><body>${content}</body></html>`;
-  downloadBlob(doc, `report_${activeDate}.html`, "text/html;charset=utf-8;");
-}
-
-async function exportFullJSONBackup() {
-  const backup = {
-    version: "8.1",
-    dateExported: new Date().toISOString(),
-    medicines: await getAllFromStore("medicines"),
-    runs: await getAllFromStore("runs"),
-    pages: await getAllFromStore("pages"),
-    entries: await getAllFromStore("entries")
-  };
-  downloadBlob(JSON.stringify(backup, null, 2), `ledger_backup_${Date.now()}.json`, "application/json");
-}
-
-async function purgeAllProcessedPhotos() {
-  if (!confirm("Purge all camera photos? All calculated numbers and reports are kept 100%.")) return;
-  const pages = await getAllFromStore("pages");
-  for (const p of pages) {
-    p.imageData = null;
-    await putRecord("pages", p);
-  }
-  window.MEMORY_PAGES.forEach(p => p.imageData = null);
-  alert("All photos purged from browser storage.");
-  await refreshDatePagesList();
-}
-
-function downloadBlob(content, filename, mimeType) {
-  const blob = new Blob([content], { type: mimeType });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement("a");
-  a.href = url; a.download = filename;
-  document.body.appendChild(a); a.click();
-  document.body.removeChild(a); URL.revokeObjectURL(url);
-}
-
-async function renderMedicineMaster() {
-  let meds = await getAllFromStore("medicines");
-  if (!meds.length) meds = DEFAULT_IRC_MEDICINES;
-  document.getElementById("medMasterCount").innerText = meds.length;
-  let html = "";
-  meds.forEach(m => {
-    html += `<div class="med-row"><div><strong>${m.id}. ${m.name}</strong><div style="font-size:0.7rem; color:var(--text-muted);">${m.sheet} &bull; Col ${m.col}</div></div></div>`;
-  });
-  document.getElementById("masterMedList").innerHTML = html;
-}
+/* ---------- start ---------- */
+(async () => {
+  await openDB();
+  loadCfgUI();
+  let d = ""; try { d = localStorage.getItem("lastDate") || ""; } catch (e) {}
+  S.date = d || new Date().toISOString().slice(0, 10);
+  $("date").value = S.date;
+  if (navigator.storage && navigator.storage.persist) navigator.storage.persist();
+  render();
+})();
 </script>
 </body>
 </html>
